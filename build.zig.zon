@@ -1,0 +1,14 @@
+.{
+    .name = .zobjc,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.16.0",
+    .fingerprint = 0x16ff44a7c1dc9348,
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+        "README.md",
+    },
+    .dependencies = .{},
+}
