@@ -2,7 +2,6 @@
 
 const std = @import("std");
 const raw = @import("../raw/root.zig");
-const c = raw.c;
 
 /// Shorthand, equivalent to Selector.registerName.
 pub inline fn sel(name: [:0]const u8) Selector {
@@ -11,19 +10,19 @@ pub inline fn sel(name: [:0]const u8) Selector {
 
 /// A typed wrapper representing an Objective-C selector (`SEL`).
 pub const Selector = struct {
-    value: c.SEL,
+    value: raw.SEL,
 
     /// Registers a method with the Objective-C runtime system, maps the
     /// method name to a selector, and returns the selector value.
     pub fn registerName(name: [:0]const u8) Selector {
         return Selector{
-            .value = c.sel_registerName(name.ptr),
+            .value = raw.objc.sel_registerName(name.ptr),
         };
     }
 
     /// Returns the name of the method specified by a given selector.
     pub fn getName(self: Selector) [:0]const u8 {
-        return std.mem.span(c.sel_getName(self.value));
+        return std.mem.span(raw.objc.sel_getName(self.value));
     }
 };
 

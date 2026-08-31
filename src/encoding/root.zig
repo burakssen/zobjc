@@ -4,7 +4,6 @@
 
 const std = @import("std");
 const raw = @import("../raw/root.zig");
-const c = raw.c;
 const assert = std.debug.assert;
 
 // TODO(phase-4): Implement complete type-encoding parser, dynamic type encodings, and validation.
@@ -76,9 +75,9 @@ pub const Encoding = union(enum) {
             bool => .bool,
             void, anyopaque => .void,
             [*c]u8, [*c]const u8 => .char_string,
-            c.SEL => .selector,
-            c.Class => .class,
-            c.id => .object,
+            raw.SEL => .selector,
+            raw.Class => .class,
+            raw.id => .object,
             else => switch (@typeInfo(T)) {
                 .@"opaque" => .void,
                 .@"enum" => |m| .init(m.tag_type),
@@ -88,9 +87,9 @@ pub const Encoding = union(enum) {
                     else => blk: {
                         // ponytail: Duck-type wrappers by single field 'value' to decouple encoding from runtime.
                         if (m.fields.len == 1 and std.mem.eql(u8, m.fields[0].name, "value")) {
-                            if (m.fields[0].type == c.id) break :blk .object;
-                            if (m.fields[0].type == c.Class) break :blk .class;
-                            if (m.fields[0].type == c.SEL) break :blk .selector;
+                            if (m.fields[0].type == raw.id) break :blk .object;
+                            if (m.fields[0].type == raw.Class) break :blk .class;
+                            if (m.fields[0].type == raw.SEL) break :blk .selector;
                         }
                         break :blk .{ .structure = .{ .struct_type = T, .show_type_spec = true } };
                     },

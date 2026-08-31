@@ -5,6 +5,13 @@ const objc = @import("objc");
 
 test "raw can be accessed independently" {
     _ = objc.raw;
+    _ = objc.raw.objc;
+    _ = objc.raw.runtime;
+    _ = objc.raw.message;
+    _ = objc.raw.blocks;
+    _ = objc.raw.compiler_runtime;
+    _ = objc.raw.availability;
+    _ = objc.raw.deprecated;
 }
 
 test "abi placeholder can be accessed independently" {

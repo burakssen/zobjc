@@ -4,7 +4,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const assert = std.debug.assert;
 const raw = @import("../raw/root.zig");
-const c = raw.c;
 const selector_pkg = @import("../runtime/selector.zig");
 const Selector = selector_pkg.Selector;
 const sel_fn = selector_pkg.sel;
@@ -26,7 +25,7 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
 
             // Our actual return value is an "id" if we are using one of
             // our built-in types (see above). Otherwise, we trust the caller.
-            const RealReturn = if (is_object) c.id else Return;
+            const RealReturn = if (is_object) raw.id else Return;
 
             // We accept multiple types for sel but we need to turn it into
             // a Selector ultimately.
@@ -40,7 +39,7 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
             const msg_send_fn = comptime msgSendPtr(RealReturn, false);
             const msg_send_ptr: *const Fn = @ptrCast(@alignCast(msg_send_fn));
 
-            // Unwrap any Object/handle types in args to their underlying c.id / c.SEL
+            // Unwrap any Object/handle types in args to their underlying raw.id / raw.SEL
             const unwrapped_args = buildUnwrappedArgs(args);
             const result = @call(.auto, msg_send_ptr, .{ target.value, sel.value } ++ unwrapped_args);
 
@@ -57,26 +56,19 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
             args: anytype,
         ) Return {
             const is_object = Return == ObjectType;
-            const RealReturn = if (is_object) c.id else Return;
+            const RealReturn = if (is_object) raw.id else Return;
             const sel: Selector = switch (@TypeOf(sel_raw)) {
                 Selector => sel_raw,
                 else => sel_fn(sel_raw),
             };
 
-            const Fn = MsgSendFn(RealReturn, *c.objc_super, @TypeOf(args));
+            const Fn = MsgSendFn(RealReturn, *raw.objc_super, @TypeOf(args));
             const msg_send_fn = comptime msgSendPtr(RealReturn, true);
             const msg_send_ptr: *const Fn = @ptrCast(@alignCast(msg_send_fn));
-            var super: c.objc_super =
-                if (comptime @hasField(c.objc_super, "super_class"))
-                    .{
-                        .receiver = target.value,
-                        .super_class = superclass.value,
-                    }
-                else
-                    .{
-                        .receiver = target.value,
-                        .class = superclass.value,
-                    };
+            var super: raw.objc_super = .{
+                .receiver = target.value,
+                .super_class = superclass.value,
+            };
 
             const unwrapped_args = buildUnwrappedArgs(args);
             const result = @call(.auto, msg_send_ptr, .{ &super, sel.value } ++ unwrapped_args);
@@ -94,7 +86,7 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
         ) *const fn () callconv(.c) void {
             return switch (builtin.target.cpu.arch) {
                 // Aarch64 uses objc_msgSend for everything.
-                .aarch64 => if (super) &c.objc_msgSendSuper else &c.objc_msgSend,
+                .aarch64 => if (super) &raw.message.objc_msgSendSuper else &raw.message.objc_msgSend,
 
                 // x86_64 depends on the return type.
                 .x86_64 => switch (@typeInfo(Return)) {
@@ -103,31 +95,31 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
                     .@"enum",
                     .pointer,
                     .void,
-                    => if (super) &c.objc_msgSendSuper else &c.objc_msgSend,
+                    => if (super) &raw.message.objc_msgSendSuper else &raw.message.objc_msgSend,
 
                     .optional => |opt| opt: {
                         assert(@typeInfo(opt.child) == .pointer);
-                        break :opt if (super) &c.objc_msgSendSuper else &c.objc_msgSend;
+                        break :opt if (super) &raw.message.objc_msgSendSuper else &raw.message.objc_msgSend;
                     },
 
                     .@"struct" => blk: {
                         // TODO(phase-5): Replace size heuristic with real System V AMD64 ABI classification.
                         if (@sizeOf(Return) > 16) {
                             break :blk if (super)
-                                &c.objc_msgSendSuper_stret
+                                &raw.message.objc_msgSendSuper_stret
                             else
-                                &c.objc_msgSend_stret;
+                                &raw.message.objc_msgSend_stret;
                         } else {
                             break :blk if (super)
-                                &c.objc_msgSendSuper
+                                &raw.message.objc_msgSendSuper
                             else
-                                &c.objc_msgSend;
+                                &raw.message.objc_msgSend;
                         }
                     },
 
                     .float => |float| switch (float.bits) {
-                        64 => if (super) &c.objc_msgSendSuper_fpret else &c.objc_msgSend_fpret,
-                        else => if (super) &c.objc_msgSendSuper else &c.objc_msgSend,
+                        64 => if (super) &raw.message.objc_msgSendSuper_fpret else &raw.message.objc_msgSend_fpret,
+                        else => if (super) &raw.message.objc_msgSendSuper else &raw.message.objc_msgSend,
                     },
 
                     else => {
@@ -149,11 +141,11 @@ pub fn MsgSendFn(
 ) type {
     const argsInfo = @typeInfo(Args).@"struct";
     assert(argsInfo.is_tuple);
-    assert(@sizeOf(Target) == @sizeOf(c.id));
+    assert(@sizeOf(Target) == @sizeOf(raw.id));
 
     var param_types: [argsInfo.fields.len + 2]type = undefined;
     param_types[0] = Target;
-    param_types[1] = c.SEL;
+    param_types[1] = raw.SEL;
     for (argsInfo.fields, 0..) |field, i| param_types[i + 2] = unwrapType(field.type);
 
     return @Fn(&param_types, &@splat(.{}), Return, .{ .@"callconv" = .c });
@@ -170,7 +162,7 @@ fn unwrapType(comptime T: type) type {
     if (@typeInfo(T) == .@"struct") {
         const info = @typeInfo(T).@"struct";
         for (info.fields) |field| {
-            if (std.mem.eql(u8, field.name, "value") and @sizeOf(field.type) == @sizeOf(c.id)) {
+            if (std.mem.eql(u8, field.name, "value") and @sizeOf(field.type) == @sizeOf(raw.id)) {
                 return field.type;
             }
         }

@@ -2,8 +2,6 @@
 
 const std = @import("std");
 const raw = @import("../raw/root.zig");
-const c = raw.c;
-const boolResult = raw.boolResult;
 const selector_pkg = @import("selector.zig");
 const Selector = selector_pkg.Selector;
 const sel_fn = selector_pkg.sel;
@@ -13,7 +11,7 @@ const MsgSend = @import("../messaging/msg_send.zig").MsgSend;
 
 /// Object is an instance of a class.
 pub const Object = struct {
-    value: c.id,
+    value: raw.id,
 
     // Implement msgSend and msgSendSuper
     const msg_send = MsgSend(Object, Object);
@@ -22,8 +20,8 @@ pub const Object = struct {
 
     /// Convert a raw "id" into an Object. id must fit the size of the
     /// normal C "id" type (i.e. a `usize`).
-    pub fn fromId(id: anytype) Object {
-        if (@sizeOf(@TypeOf(id)) != @sizeOf(c.id)) {
+    pub fn fromId(id_val: anytype) Object {
+        if (@sizeOf(@TypeOf(id_val)) != @sizeOf(raw.id)) {
             @compileError("invalid id type");
         }
 
@@ -32,9 +30,9 @@ pub const Object = struct {
         // It's an internal implementation detail that replaces heap
         // allocation with direct encoding within the pointer itself.
         // This may result in UNALIGNED POINTERS!
-        const ptr: c.id = blk: {
+        const ptr: raw.id = blk: {
             @setRuntimeSafety(false);
-            break :blk @ptrCast(@alignCast(id));
+            break :blk @ptrCast(@alignCast(id_val));
         };
 
         return .{ .value = ptr };
@@ -42,14 +40,15 @@ pub const Object = struct {
 
     /// Returns the class of an object.
     pub fn getClass(self: Object) ?class_pkg.Class {
+        const cls_ptr = raw.runtime.object_getClass(self.value) orelse return null;
         return class_pkg.Class{
-            .value = c.object_getClass(self.value) orelse return null,
+            .value = cls_ptr,
         };
     }
 
     /// Returns the class name of a given object.
     pub fn getClassName(self: Object) [:0]const u8 {
-        return std.mem.span(c.object_getClassName(self.value));
+        return std.mem.span(raw.objc.object_getClassName(self.value));
     }
 
     /// Set a property. This is a helper around getProperty and is
@@ -96,34 +95,34 @@ pub const Object = struct {
     }
 
     pub fn copy(self: Object, size: usize) Object {
-        return fromId(c.object_copy(self.value, size));
+        return fromId(raw.runtime.object_copy(self.value, size));
     }
 
     pub fn dispose(self: Object) void {
-        _ = c.object_dispose(self.value);
+        _ = raw.runtime.object_dispose(self.value);
     }
 
     pub fn isClass(self: Object) bool {
-        return boolResult(c.object_isClass(self.value));
+        return raw.boolResult(raw.runtime.object_isClass(self.value));
     }
 
     pub fn getInstanceVariable(self: Object, name: [:0]const u8) Object {
-        const ivar = c.object_getInstanceVariable(self.value, name, null);
-        return fromId(c.object_getIvar(self.value, ivar));
+        const ivar = raw.runtime.object_getInstanceVariable(self.value, name, null);
+        return fromId(raw.runtime.object_getIvar(self.value, ivar));
     }
 
     pub fn setInstanceVariable(self: Object, name: [:0]const u8, val: Object) void {
-        const ivar = c.object_getInstanceVariable(self.value, name, null);
-        c.object_setIvar(self.value, ivar, val.value);
+        const ivar = raw.runtime.object_getInstanceVariable(self.value, name, null);
+        raw.runtime.object_setIvar(self.value, ivar, val.value);
     }
 
     // TODO(phase-3): Integrate retain/release into Retained(T) ownership type.
     pub fn retain(self: Object) Object {
-        return fromId(objc_retain(self.value));
+        return fromId(raw.compiler_runtime.objc_retain(self.value));
     }
 
     pub fn release(self: Object) void {
-        objc_release(self.value);
+        raw.compiler_runtime.objc_release(self.value);
     }
 
     /// Return an iterator for this object. The object must implement the
@@ -132,6 +131,3 @@ pub const Object = struct {
         return Iterator.init(self);
     }
 };
-
-extern "c" fn objc_retain(c.id) c.id;
-extern "c" fn objc_release(c.id) void;

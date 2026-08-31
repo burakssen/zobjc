@@ -20,16 +20,18 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    objc_mod.addImport("objc-c", objc_c);
     if (add_paths) try addAppleSDK(b, objc_mod);
     objc_mod.linkSystemLibrary("objc", .{});
     objc_mod.linkFramework("Foundation", .{});
 
-    _ = b.addModule("zobjc", .{
+    const zobjc_mod = b.addModule("zobjc", .{
         .root_source_file = b.path("src/objc.zig"),
         .target = target,
         .optimize = optimize,
     });
+    if (add_paths) try addAppleSDK(b, zobjc_mod);
+    zobjc_mod.linkSystemLibrary("objc", .{});
+    zobjc_mod.linkFramework("Foundation", .{});
 
     // Master test suite
     const master_test = addObjcTest(b, target, optimize, "test-all", "tests/root.zig", objc_c, add_paths, true);
@@ -42,6 +44,12 @@ pub fn build(b: *std.Build) !void {
     // Step: test-all (alias to test)
     const test_all_step = b.step("test-all", "Run all tests");
     test_all_step.dependOn(&run_master_test.step);
+
+    // Step: test-raw (runs raw ABI subsystem tests)
+    const raw_test = addObjcTest(b, target, optimize, "test-raw", "tests/raw/root.zig", objc_c, add_paths, false);
+    const run_raw_test = b.addRunArtifact(raw_test);
+    const test_raw_step = b.step("test-raw", "Run raw ABI subsystem tests");
+    test_raw_step.dependOn(&run_raw_test.step);
 
     // Step: test-runtime (runs pure runtime tests)
     const runtime_test = addObjcTest(b, target, optimize, "test-runtime", "tests/runtime/root.zig", objc_c, add_paths, true);
@@ -73,7 +81,6 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         exe_mod.addImport("objc", objc_mod);
-        exe_mod.addImport("objc-c", objc_c);
         if (add_paths) try addAppleSDK(b, exe_mod);
         exe_mod.linkSystemLibrary("objc", .{});
         exe_mod.linkFramework("Foundation", .{});
@@ -107,7 +114,6 @@ fn addObjcTest(
         .target = target,
         .optimize = optimize,
     });
-    objc_facade.addImport("objc-c", objc_c);
     mod.addImport("objc", objc_facade);
     mod.addImport("objc-c", objc_c);
 

@@ -2,6 +2,7 @@
 
 test {
     _ = @import("architecture_test.zig");
+    _ = @import("raw/root.zig");
     _ = @import("compatibility/root.zig");
     _ = @import("runtime/root.zig");
     _ = @import("messaging/root.zig");

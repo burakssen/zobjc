@@ -4,7 +4,6 @@
 
 const std = @import("std");
 const raw = @import("../raw/root.zig");
-const c = raw.c;
 const selector_pkg = @import("selector.zig");
 const Selector = selector_pkg.Selector;
 const sel_fn = selector_pkg.sel;
@@ -13,7 +12,7 @@ const Object = @import("object.zig").Object;
 // From <Foundation/NSEnumerator.h>.
 const NSFastEnumerationState = extern struct {
     state: c_ulong = 0,
-    itemsPtr: ?[*]c.id = null,
+    itemsPtr: ?[*]raw.id = null,
     mutationsPtr: ?*c_ulong = null,
     extra: [5]c_ulong = [_]c_ulong{0} ** 5,
 };
@@ -25,8 +24,8 @@ pub const Iterator = struct {
     sel: Selector,
     state: NSFastEnumerationState = .{},
     initial_mutations_value: ?c_ulong = null,
-    buffer: [16]c.id = [_]c.id{null} ** 16,
-    slice: []const c.id = &.{},
+    buffer: [16]raw.id = [_]raw.id{null} ** 16,
+    slice: []const raw.id = &.{},
 
     pub fn init(object: Object) Iterator {
         return .{
@@ -44,7 +43,7 @@ pub const Iterator = struct {
             });
             if (self.initial_mutations_value) |value| {
                 if (value != self.state.mutationsPtr.?.*) {
-                    c.objc_enumerationMutation(self.object.value);
+                    raw.runtime.objc_enumerationMutation(self.object.value);
                 }
             } else {
                 self.initial_mutations_value = self.state.mutationsPtr.?.*;

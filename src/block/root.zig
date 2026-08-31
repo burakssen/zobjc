@@ -6,7 +6,6 @@ const std = @import("std");
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 const raw = @import("../raw/root.zig");
-const c = raw.c;
 const comptimeEncode = @import("../encoding/root.zig").comptimeEncode;
 
 // We have to use the raw C allocator for all heap allocation in here
@@ -27,7 +26,7 @@ pub fn Block(
         const Self = @This();
         const captures_info = @typeInfo(Captures).@"struct";
         const InvokeFn = FnType(anyopaque);
-        const descriptor: Descriptor = .{
+        const descriptor: raw.blocks.BlockDescriptor = .{
             .reserved = 0,
             .size = @sizeOf(Context),
             .copy_helper = &descCopyHelper,
@@ -48,7 +47,7 @@ pub fn Block(
         /// (by reference) to functions that request a block.
         pub fn init(captures: Captures, func: *const Fn) Context {
             var ctx: Context = undefined;
-            ctx.isa = NSConcreteStackBlock;
+            ctx.isa = raw.blocks._NSConcreteStackBlock;
             ctx.flags = .{
                 .copy_dispose = true,
                 .stret = @typeInfo(Return) == .@"struct",
@@ -76,7 +75,7 @@ pub fn Block(
         /// to the heap or increasing the reference count. This must be
         /// paired with a `release` call to release the block.
         pub fn copy(ctx: *const Context) Allocator.Error!*Context {
-            const copied = _Block_copy(@ptrCast(@alignCast(ctx))) orelse
+            const copied = raw.blocks._Block_copy(@ptrCast(@alignCast(ctx))) orelse
                 return error.OutOfMemory;
             return @ptrCast(@alignCast(copied));
         }
@@ -84,18 +83,18 @@ pub fn Block(
         /// Release a copied block context. This must only be called on
         /// contexts returned by the `copy` function.
         pub fn release(ctx: *const Context) void {
-            assert(@intFromPtr(ctx.isa) == @intFromPtr(NSConcreteMallocBlock));
-            _Block_release(@ptrCast(@alignCast(ctx)));
+            assert(@intFromPtr(ctx.isa) == @intFromPtr(raw.blocks._NSConcreteMallocBlock));
+            raw.blocks._Block_release(@ptrCast(@alignCast(ctx)));
         }
 
         fn descCopyHelper(dst: *anyopaque, src: *anyopaque) callconv(.c) void {
             const real_dst: *Context = @ptrCast(@alignCast(dst));
             const real_src: *Context = @ptrCast(@alignCast(src));
             inline for (captures_info.fields) |field| {
-                if (field.type == c.id) {
-                    _Block_object_assign(
+                if (field.type == raw.id) {
+                    raw.blocks._Block_object_assign(
                         @ptrCast(&@field(real_dst, field.name)),
-                        @field(real_src, field.name),
+                        @ptrCast(@field(real_src, field.name)),
                         .object,
                     );
                 }
@@ -105,9 +104,9 @@ pub fn Block(
         fn descDisposeHelper(src: *anyopaque) callconv(.c) void {
             const real_src: *Context = @ptrCast(@alignCast(src));
             inline for (captures_info.fields) |field| {
-                if (field.type == c.id) {
-                    _Block_object_dispose(
-                        @field(real_src, field.name),
+                if (field.type == raw.id) {
+                    raw.blocks._Block_object_dispose(
+                        @ptrCast(@field(real_src, field.name)),
                         .object,
                     );
                 }
@@ -136,7 +135,7 @@ fn BlockContext(comptime Captures: type, comptime InvokeFn: type) type {
     };
     fields[1] = .{
         .name = "flags",
-        .type = BlockFlags,
+        .type = raw.blocks.BlockFlags,
         .default_value_ptr = null,
         .is_comptime = false,
         .alignment = @alignOf(c_int),
@@ -157,10 +156,10 @@ fn BlockContext(comptime Captures: type, comptime InvokeFn: type) type {
     };
     fields[4] = .{
         .name = "descriptor",
-        .type = *const Descriptor,
+        .type = *const raw.blocks.BlockDescriptor,
         .default_value_ptr = null,
         .is_comptime = false,
-        .alignment = @alignOf(*Descriptor),
+        .alignment = @alignOf(*raw.blocks.BlockDescriptor),
     };
 
     for (captures_info.fields, 5..) |capture, i| {
@@ -183,40 +182,3 @@ fn BlockContext(comptime Captures: type, comptime InvokeFn: type) type {
 
     return @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
 }
-
-const NSConcreteStackBlock = @extern(*opaque {}, .{ .name = "_NSConcreteStackBlock" });
-const NSConcreteMallocBlock = @extern(*opaque {}, .{ .name = "_NSConcreteMallocBlock" });
-
-const BlockFieldFlags = enum(c_int) {
-    object = 3,
-    block = 7,
-    byref = 8,
-    weak = 16,
-    byref_caller = 128,
-};
-
-extern "c" fn _Block_copy(src: *const anyopaque) callconv(.c) ?*anyopaque;
-extern "c" fn _Block_release(src: *const anyopaque) callconv(.c) void;
-extern "c" fn _Block_object_assign(dst: *anyopaque, src: *const anyopaque, flag: BlockFieldFlags) void;
-extern "c" fn _Block_object_dispose(src: *const anyopaque, flag: BlockFieldFlags) void;
-
-const Descriptor = extern struct {
-    reserved: c_ulong = 0,
-    size: c_ulong,
-    copy_helper: *const fn (dst: *anyopaque, src: *anyopaque) callconv(.c) void,
-    dispose_helper: *const fn (src: *anyopaque) callconv(.c) void,
-    signature: ?[*:0]const u8,
-};
-
-const BlockFlags = packed struct(c_int) {
-    _unused: u23 = 0,
-    noescape: bool = false,
-    _unused_2: u1 = 0,
-    copy_dispose: bool = false,
-    ctor: bool = false,
-    _unused_3: u1 = 0,
-    global: bool = false,
-    stret: bool = false,
-    signature: bool = false,
-    _unused_4: u1 = 0,
-};
