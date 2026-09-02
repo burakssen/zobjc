@@ -1,22 +1,41 @@
 //! Objective-C instance (Object) handle.
+//!
+//! A non-owning, non-null handle to an Objective-C object instance (`id`).
 
 const std = @import("std");
 const raw = @import("../raw/root.zig");
-const selector_pkg = @import("selector.zig");
-const Selector = selector_pkg.Selector;
-const sel_fn = selector_pkg.sel;
-const class_pkg = @import("class.zig");
+const conversion = @import("conversion.zig");
+const Class = @import("class.zig").Class;
+const Selector = @import("selector.zig").Selector;
+const sel_fn = @import("selector.zig").sel;
+const Ivar = @import("ivar.zig").Ivar;
 const Iterator = @import("iterator.zig").Iterator;
 const MsgSend = @import("../messaging/msg_send.zig").MsgSend;
 
-/// Object is an instance of a class.
+/// A non-owning, non-null handle to an Objective-C object instance (`id`).
 pub const Object = struct {
-    value: raw.id,
+    ptr: *raw.objc_object,
 
     // Implement msgSend and msgSendSuper
     const msg_send = MsgSend(Object, Object);
     pub const msgSend = msg_send.msgSend;
     pub const msgSendSuper = msg_send.msgSendSuper;
+
+    /// Converts a raw nullable `raw.id` into an optional `Object`.
+    pub inline fn fromRaw(val: raw.id) ?Object {
+        const p = val orelse return null;
+        return .{ .ptr = p };
+    }
+
+    /// Converts this `Object` into its raw `raw.id` pointer.
+    pub inline fn toRaw(self: Object) raw.id {
+        return self.ptr;
+    }
+
+    /// Creates an `Object` from a known non-null raw object pointer.
+    pub inline fn fromRawNonNull(p: *raw.objc_object) Object {
+        return .{ .ptr = p };
+    }
 
     /// Convert a raw "id" into an Object. id must fit the size of the
     /// normal C "id" type (i.e. a `usize`).
@@ -30,32 +49,72 @@ pub const Object = struct {
         // It's an internal implementation detail that replaces heap
         // allocation with direct encoding within the pointer itself.
         // This may result in UNALIGNED POINTERS!
-        const ptr: raw.id = blk: {
+        const p: *raw.objc_object = blk: {
             @setRuntimeSafety(false);
-            break :blk @ptrCast(@alignCast(id_val));
+            const raw_p: raw.id = @ptrCast(@alignCast(id_val));
+            break :blk raw_p orelse @panic("attempted to create Object from null id");
         };
 
-        return .{ .value = ptr };
+        return .{ .ptr = p };
     }
 
-    /// Returns the class of an object.
-    pub fn getClass(self: Object) ?class_pkg.Class {
-        const cls_ptr = raw.runtime.object_getClass(self.value) orelse return null;
-        return class_pkg.Class{
-            .value = cls_ptr,
-        };
+    /// Returns the class of the object.
+    pub inline fn class(self: Object) Class {
+        const cls_ptr = raw.runtime.object_getClass(self.ptr) orelse unreachable;
+        return Class.fromRawNonNull(cls_ptr);
     }
 
-    /// Returns the class name of a given object.
-    pub fn getClassName(self: Object) [:0]const u8 {
-        return std.mem.span(raw.objc.object_getClassName(self.value));
+    /// Legacy alias for class().
+    pub inline fn getClass(self: Object) ?Class {
+        return Class.fromRaw(raw.runtime.object_getClass(self.ptr));
+    }
+
+    /// Sets the class of the object, returning the previous class.
+    pub inline fn setClass(self: Object, new_class: Class) Class {
+        const old_cls = raw.runtime.object_setClass(self.ptr, new_class.ptr) orelse unreachable;
+        return Class.fromRawNonNull(old_cls);
+    }
+
+    /// Returns the class name of the object.
+    pub inline fn className(self: Object) [:0]const u8 {
+        return conversion.spanCString(raw.objc.object_getClassName(self.ptr));
+    }
+
+    /// Legacy alias for className().
+    pub inline fn getClassName(self: Object) [:0]const u8 {
+        return self.className();
+    }
+
+    /// Returns whether this object is a class object.
+    pub inline fn isClass(self: Object) bool {
+        return raw.boolResult(raw.runtime.object_isClass(self.ptr));
+    }
+
+    /// Returns a pointer to any extra memory allocated with the instance (indexed ivars).
+    pub inline fn indexedIvars(self: Object) ?*anyopaque {
+        return raw.objc.object_getIndexedIvars(self.ptr);
+    }
+
+    /// Reads an instance variable value via an Ivar handle.
+    pub inline fn getIvar(self: Object, ivar_val: Ivar) ?Object {
+        return Object.fromRaw(raw.runtime.object_getIvar(self.ptr, ivar_val.ptr));
+    }
+
+    /// Writes an instance variable value via an Ivar handle.
+    pub inline fn setIvar(self: Object, ivar_val: Ivar, val: ?Object) void {
+        const raw_val = if (val) |v| v.ptr else null;
+        raw.runtime.object_setIvar(self.ptr, ivar_val.ptr, raw_val);
+    }
+
+    /// Compares two Object handles for pointer identity.
+    pub inline fn eql(self: Object, other: Object) bool {
+        return self.ptr == other.ptr;
     }
 
     /// Set a property. This is a helper around getProperty and is
-    /// strictly less performant than doing it manually. Consider doing
-    /// this manually if performance is critical.
+    /// strictly less performant than doing it manually.
     pub fn setProperty(self: Object, comptime n: [:0]const u8, v: anytype) void {
-        const cls = self.getClass().?;
+        const cls = self.class();
         const setter = setter: {
             if (cls.getProperty(n)) |prop| {
                 if (prop.copyAttributeValue("S")) |val| {
@@ -76,10 +135,9 @@ pub const Object = struct {
     }
 
     /// Get a property. This is a helper around Class.getProperty and is
-    /// strictly less performant than doing it manually. Consider doing
-    /// this manually if performance is critical.
+    /// strictly less performant than doing it manually.
     pub fn getProperty(self: Object, comptime T: type, comptime n: [:0]const u8) T {
-        const cls = self.getClass().?;
+        const cls = self.class();
         const getter = getter: {
             if (cls.getProperty(n)) |prop| {
                 if (prop.copyAttributeValue("G")) |val| {
@@ -94,40 +152,45 @@ pub const Object = struct {
         return self.msgSend(T, getter, .{});
     }
 
-    pub fn copy(self: Object, size: usize) Object {
-        return fromId(raw.runtime.object_copy(self.value, size));
+    /// Creates a copy of an object.
+    pub fn copy(self: Object, extra_bytes: usize) ?Object {
+        return Object.fromRaw(raw.runtime.object_copy(self.ptr, extra_bytes));
     }
 
+    /// Frees the memory occupied by an object.
     pub fn dispose(self: Object) void {
-        _ = raw.runtime.object_dispose(self.value);
+        _ = raw.runtime.object_dispose(self.ptr);
     }
 
-    pub fn isClass(self: Object) bool {
-        return raw.boolResult(raw.runtime.object_isClass(self.value));
+    /// Reads an instance variable value by name.
+    pub fn getInstanceVariable(self: Object, name_str: [:0]const u8) ?Object {
+        const ivar = raw.runtime.object_getInstanceVariable(self.ptr, name_str.ptr, null);
+        return Object.fromRaw(raw.runtime.object_getIvar(self.ptr, ivar));
     }
 
-    pub fn getInstanceVariable(self: Object, name: [:0]const u8) Object {
-        const ivar = raw.runtime.object_getInstanceVariable(self.value, name, null);
-        return fromId(raw.runtime.object_getIvar(self.value, ivar));
-    }
-
-    pub fn setInstanceVariable(self: Object, name: [:0]const u8, val: Object) void {
-        const ivar = raw.runtime.object_getInstanceVariable(self.value, name, null);
-        raw.runtime.object_setIvar(self.value, ivar, val.value);
+    /// Writes an instance variable value by name.
+    pub fn setInstanceVariable(self: Object, name_str: [:0]const u8, val: Object) void {
+        const ivar = raw.runtime.object_getInstanceVariable(self.ptr, name_str.ptr, null);
+        raw.runtime.object_setIvar(self.ptr, ivar, val.ptr);
     }
 
     // TODO(phase-3): Integrate retain/release into Retained(T) ownership type.
     pub fn retain(self: Object) Object {
-        return fromId(raw.compiler_runtime.objc_retain(self.value));
+        return Object.fromRawNonNull(raw.compiler_runtime.objc_retain(self.ptr).?);
     }
 
     pub fn release(self: Object) void {
-        raw.compiler_runtime.objc_release(self.value);
+        raw.compiler_runtime.objc_release(self.ptr);
     }
 
     /// Return an iterator for this object. The object must implement the
     /// `NSFastEnumeration` protocol.
     pub fn iterate(self: Object) Iterator {
         return Iterator.init(self);
+    }
+
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(raw.id));
+        std.debug.assert(@alignOf(@This()) == @alignOf(raw.id));
     }
 };

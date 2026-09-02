@@ -53,7 +53,7 @@ test "block: captured objc object retains across copy" {
         id: objc.c.id,
     }, .{}, objc.c.id);
 
-    var block = ObjectBlock.init(.{ .id = obj.value }, (struct {
+    var block = ObjectBlock.init(.{ .id = obj.toRaw() }, (struct {
         fn get(ctx: *const ObjectBlock.Context) callconv(.c) objc.c.id {
             return ctx.id;
         }
@@ -63,5 +63,5 @@ test "block: captured objc object retains across copy" {
     defer ObjectBlock.release(copied);
 
     const returned_id = ObjectBlock.invoke(copied, .{});
-    try testing.expectEqual(obj.value, returned_id);
+    try testing.expectEqual(obj.toRaw(), returned_id);
 }

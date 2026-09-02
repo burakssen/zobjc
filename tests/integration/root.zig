@@ -64,6 +64,6 @@ test "integration: tagged pointer unaligned cast" {
     const num = NSNumber.msgSend(objc.Object, "numberWithChar:", .{@as(u8, 5)});
 
     // fromId on tagged pointer
-    const obj = objc.Object.fromId(num.value);
-    try testing.expectEqual(num.value, obj.value);
+    const obj = objc.Object.fromId(num.toRaw());
+    try testing.expectEqual(num.toRaw(), obj.toRaw());
 }

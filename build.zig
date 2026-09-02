@@ -71,6 +71,7 @@ pub fn build(b: *std.Build) !void {
         "subclass",
         "block",
         "autorelease_pool",
+        "runtime_introspection",
     };
 
     for (example_names) |name| {

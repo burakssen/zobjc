@@ -19,13 +19,9 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
             sel_raw: anytype,
             args: anytype,
         ) Return {
-            // Our one special-case: If the return type is our own Object
-            // type then we wrap it.
             const is_object = Return == ObjectType;
-
-            // Our actual return value is an "id" if we are using one of
-            // our built-in types (see above). Otherwise, we trust the caller.
-            const RealReturn = if (is_object) raw.id else Return;
+            const is_opt_object = Return == ?ObjectType;
+            const RealReturn = if (is_object or is_opt_object) raw.id else Return;
 
             // We accept multiple types for sel but we need to turn it into
             // a Selector ultimately.
@@ -34,17 +30,24 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
                 else => sel_fn(sel_raw),
             };
 
+            const target_raw = unwrapValue(target);
+
             // Build our function type and call it
-            const Fn = MsgSendFn(RealReturn, @TypeOf(target.value), @TypeOf(args));
+            const Fn = MsgSendFn(RealReturn, @TypeOf(target_raw), @TypeOf(args));
             const msg_send_fn = comptime msgSendPtr(RealReturn, false);
             const msg_send_ptr: *const Fn = @ptrCast(@alignCast(msg_send_fn));
 
-            // Unwrap any Object/handle types in args to their underlying raw.id / raw.SEL
+            // Unwrap any Object/handle types in args to their underlying raw pointers
             const unwrapped_args = buildUnwrappedArgs(args);
-            const result = @call(.auto, msg_send_ptr, .{ target.value, sel.value } ++ unwrapped_args);
+            const result = @call(.auto, msg_send_ptr, .{ target_raw, sel.ptr } ++ unwrapped_args);
 
-            if (!is_object) return result;
-            return .{ .value = result };
+            if (is_object) {
+                return ObjectType.fromRaw(result) orelse @panic("msgSend returned nil for non-optional Object");
+            }
+            if (is_opt_object) {
+                return ObjectType.fromRaw(result);
+            }
+            return result;
         }
 
         /// Invoke a selector on the superclass.
@@ -56,7 +59,8 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
             args: anytype,
         ) Return {
             const is_object = Return == ObjectType;
-            const RealReturn = if (is_object) raw.id else Return;
+            const is_opt_object = Return == ?ObjectType;
+            const RealReturn = if (is_object or is_opt_object) raw.id else Return;
             const sel: Selector = switch (@TypeOf(sel_raw)) {
                 Selector => sel_raw,
                 else => sel_fn(sel_raw),
@@ -65,16 +69,24 @@ pub fn MsgSend(comptime T: type, comptime ObjectType: type) type {
             const Fn = MsgSendFn(RealReturn, *raw.objc_super, @TypeOf(args));
             const msg_send_fn = comptime msgSendPtr(RealReturn, true);
             const msg_send_ptr: *const Fn = @ptrCast(@alignCast(msg_send_fn));
+
+            const target_raw = unwrapValue(target);
+            const super_raw = unwrapValue(superclass);
             var super: raw.objc_super = .{
-                .receiver = target.value,
-                .super_class = superclass.value,
+                .receiver = @ptrCast(target_raw),
+                .super_class = @ptrCast(super_raw),
             };
 
             const unwrapped_args = buildUnwrappedArgs(args);
-            const result = @call(.auto, msg_send_ptr, .{ &super, sel.value } ++ unwrapped_args);
+            const result = @call(.auto, msg_send_ptr, .{ &super, sel.ptr } ++ unwrapped_args);
 
-            if (!is_object) return result;
-            return .{ .value = result };
+            if (is_object) {
+                return ObjectType.fromRaw(result) orelse @panic("msgSend returned nil for non-optional Object");
+            }
+            if (is_opt_object) {
+                return ObjectType.fromRaw(result);
+            }
+            return result;
         }
 
         /// Returns the objc_msgSend or objc_msgSendSuper pointer for the
@@ -162,7 +174,7 @@ fn unwrapType(comptime T: type) type {
     if (@typeInfo(T) == .@"struct") {
         const info = @typeInfo(T).@"struct";
         for (info.fields) |field| {
-            if (std.mem.eql(u8, field.name, "value") and @sizeOf(field.type) == @sizeOf(raw.id)) {
+            if ((std.mem.eql(u8, field.name, "ptr") or std.mem.eql(u8, field.name, "value")) and @sizeOf(field.type) == @sizeOf(raw.id)) {
                 return field.type;
             }
         }
@@ -190,14 +202,23 @@ fn unwrapType(comptime T: type) type {
     return T;
 }
 
+inline fn unwrapValue(val: anytype) unwrapType(@TypeOf(val)) {
+    const T = @TypeOf(val);
+    if (comptime unwrapType(T) != T) {
+        if (@hasField(T, "ptr")) {
+            return val.ptr;
+        } else if (@hasField(T, "value")) {
+            return val.value;
+        }
+    }
+    return val;
+}
+
 inline fn buildUnwrappedArgs(args: anytype) UnwrappedArgs(@TypeOf(args)) {
     const fields = @typeInfo(@TypeOf(args)).@"struct".fields;
     var result: UnwrappedArgs(@TypeOf(args)) = undefined;
     inline for (fields, 0..) |_, i| {
-        result[i] = if (unwrapType(@TypeOf(args[i])) != @TypeOf(args[i]))
-            args[i].value
-        else
-            args[i];
+        result[i] = unwrapValue(args[i]);
     }
     return result;
 }

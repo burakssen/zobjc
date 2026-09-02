@@ -43,7 +43,7 @@ pub const Iterator = struct {
             });
             if (self.initial_mutations_value) |value| {
                 if (value != self.state.mutationsPtr.?.*) {
-                    raw.runtime.objc_enumerationMutation(self.object.value);
+                    raw.runtime.objc_enumerationMutation(self.object.ptr);
                 }
             } else {
                 self.initial_mutations_value = self.state.mutationsPtr.?.*;

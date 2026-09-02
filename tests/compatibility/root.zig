@@ -30,7 +30,7 @@ test "compatibility: Class.msgSend and Object.msgSend" {
 
     // Class msgSend
     const obj = NSObject.msgSend(objc.Object, "alloc", .{});
-    try testing.expect(obj.value != null);
+    try testing.expect(obj.toRaw() != null);
 
     // Object msgSend
     _ = obj.msgSend(objc.Object, "init", .{});
@@ -51,7 +51,7 @@ test "compatibility: Object.msgSendSuper" {
             return target;
         }
     };
-    Subclass.replaceMethod("init", str.inner);
+    _ = Subclass.replaceMethod(objc.sel("init"), objc.Imp.fromRawNonNull(@ptrCast(&str.inner)), "@:@");
     objc.registerClassPair(Subclass);
 
     const instance = Subclass.msgSend(objc.Object, "alloc", .{})

@@ -62,11 +62,11 @@ test "messaging: superclass dispatch" {
             return target;
         }
     };
-    Subclass.replaceMethod("init", str.initMethod);
+    _ = Subclass.replaceMethod(objc.sel("init"), objc.Imp.fromRawNonNull(@ptrCast(&str.initMethod)), "@:@");
     objc.registerClassPair(Subclass);
 
     const obj = Subclass.msgSend(objc.Object, "alloc", .{})
         .msgSend(objc.Object, "init", .{});
     defer obj.msgSend(void, "dealloc", .{});
-    try testing.expect(obj.value != null);
+    try testing.expect(obj.toRaw() != null);
 }

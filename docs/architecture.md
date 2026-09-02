@@ -56,7 +56,7 @@ flowchart TD
 | Subsystem | Responsibility | Phase Introduced / Redesigned |
 | :--- | :--- | :---: |
 | `raw/` | Exact Objective-C runtime ABI declarations (`objc.raw.runtime.*`). Direct underlying C calls without convenience behavior, memory policies, or conversions. | Phase 1 |
-| `runtime/` | Typed Objective-C runtime entities: `Object`, `Class`, `Selector`, `Method`, `Ivar`, `Property`, `Protocol`. Conceptual wrappers around runtime handles. Does not own ABI dispatch decisions. | Phase 2 |
+| `runtime/` | Typed Objective-C runtime entities: `Object`, `Class`, `Selector`, `Method`, `Ivar`, `Property`, `Protocol`, `Imp`. Conceptual wrappers around runtime handles. Does not own ABI dispatch decisions. | Phase 2 |
 | `memory/` | Ownership and memory management: `AutoreleasePool`, `Retained(T)`, `Weak(T)`, `OwnedSlice(T)`, `OwnedCString`. | Phase 3 |
 | `encoding/` | Objective-C type encodings: `comptimeEncode(T)`, type encoding parser, method encoding string verification. | Phase 4 |
 | `abi/` | Calling-convention classification: answers whether a given target architecture and return aggregate requires `objc_msgSend`, `objc_msgSend_stret`, or `objc_msgSend_fpret`. Independent of classes and selectors. | Phase 5 |

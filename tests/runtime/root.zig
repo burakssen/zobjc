@@ -1,8 +1,22 @@
-//! Baseline behavioral tests for the runtime subsystem.
+//! Baseline and modular unit tests for the runtime subsystem.
 
 const std = @import("std");
 const objc = @import("objc");
 const testing = std.testing;
+
+test {
+    _ = @import("handle_sizes_test.zig");
+    _ = @import("conversion_test.zig");
+    _ = @import("selector_test.zig");
+    _ = @import("class_test.zig");
+    _ = @import("method_test.zig");
+    _ = @import("ivar_test.zig");
+    _ = @import("property_test.zig");
+    _ = @import("protocol_test.zig");
+    _ = @import("object_test.zig");
+    _ = @import("lookup_test.zig");
+    _ = @import("mutation_test.zig");
+}
 
 test "runtime: class lookup and metaclass lookup" {
     const NSObject = objc.getClass("NSObject");
@@ -57,25 +71,25 @@ test "runtime: subclass creation, method replacement, and ivar addition" {
     var dynamic_class = objc.allocateClassPair(NSObject, "DynamicTestClass").?;
 
     // Add an ivar
-    try testing.expect(dynamic_class.addIvar("custom_ivar"));
+    try testing.expect(dynamic_class.addIvar("custom_ivar", @sizeOf(objc.raw.id), @truncate(std.math.log2(@alignOf(objc.raw.id))), "@"));
 
     // Replace a method
-    dynamic_class.replaceMethod("hash", struct {
-        fn inner(target: objc.c.id, sel_val: objc.c.SEL) callconv(.c) u64 {
+    _ = dynamic_class.replaceMethod(objc.sel("hash"), objc.Imp.fromRawNonNull(@ptrCast(&struct {
+        fn inner(target: objc.raw.id, sel_val: objc.raw.SEL) callconv(.c) u64 {
             _ = target;
             _ = sel_val;
             return 42;
         }
-    }.inner);
+    }.inner)), "Q@:");
 
     // Add a new method
-    try testing.expect(dynamic_class.addMethod("multiplyByTwo:", struct {
-        fn imp(target: objc.c.id, sel_val: objc.c.SEL, val: i32) callconv(.c) i32 {
+    try testing.expect(dynamic_class.addMethod(objc.sel("multiplyByTwo:"), objc.Imp.fromRawNonNull(@ptrCast(&struct {
+        fn imp(target: objc.raw.id, sel_val: objc.raw.SEL, val: i32) callconv(.c) i32 {
             _ = target;
             _ = sel_val;
             return val * 2;
         }
-    }.imp));
+    }.imp)), "i@:i"));
 
     objc.registerClassPair(dynamic_class);
     defer objc.disposeClassPair(dynamic_class);
@@ -98,7 +112,7 @@ test "runtime: subclass creation, method replacement, and ivar addition" {
     defer str.msgSend(void, "dealloc", .{});
 
     instance.setInstanceVariable("custom_ivar", str);
-    const read_ivar = instance.getInstanceVariable("custom_ivar");
+    const read_ivar = instance.getInstanceVariable("custom_ivar").?;
     const utf8 = read_ivar.getProperty([*c]const u8, "UTF8String");
     try testing.expectEqualStrings("ivar_test_val", std.mem.span(utf8));
 }

@@ -26,15 +26,24 @@ pub const Property = runtime.Property;
 pub const Protocol = runtime.Protocol;
 pub const Method = runtime.Method;
 pub const Ivar = runtime.Ivar;
+pub const Imp = runtime.Imp;
 pub const Iterator = runtime.Iterator;
+
+// Descriptors
+pub const MethodDescription = runtime.MethodDescription;
+pub const PropertyAttribute = runtime.PropertyAttribute;
+pub const ProtocolMethodOptions = runtime.ProtocolMethodOptions;
+pub const ProtocolPropertyOptions = runtime.ProtocolPropertyOptions;
 
 // Runtime lookup & manipulation functions
 pub const getClass = runtime.getClass;
+pub const lookupClass = runtime.lookupClass;
+pub const requireClass = runtime.requireClass;
 pub const getMetaClass = runtime.getMetaClass;
+pub const getProtocol = runtime.getProtocol;
 pub const allocateClassPair = runtime.allocateClassPair;
 pub const registerClassPair = runtime.registerClassPair;
 pub const disposeClassPair = runtime.disposeClassPair;
-pub const getProtocol = runtime.getProtocol;
 pub const sel = runtime.sel;
 
 // Block & Memory subsystems

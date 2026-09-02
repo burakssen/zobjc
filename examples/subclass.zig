@@ -7,14 +7,14 @@ pub fn main() void {
     const NSObject = objc.getClass("NSObject") orelse return;
     const MyClass = objc.allocateClassPair(NSObject, "CustomGreeterClass") orelse return;
 
-    MyClass.replaceMethod("description", struct {
-        fn customDescription(target: objc.c.id, sel_val: objc.c.SEL) callconv(.c) objc.c.id {
+    _ = MyClass.replaceMethod(objc.sel("description"), objc.Imp.fromRawNonNull(@ptrCast(&struct {
+        fn customDescription(target: objc.raw.id, sel_val: objc.raw.SEL) callconv(.c) objc.raw.id {
             _ = sel_val;
             _ = target;
             const NSString = objc.getClass("NSString").?;
-            return NSString.msgSend(objc.c.id, "stringWithUTF8String:", .{"Greetings from custom subclass!"});
+            return NSString.msgSend(objc.Object, "stringWithUTF8String:", .{"Greetings from custom subclass!"}).toRaw();
         }
-    }.customDescription);
+    }.customDescription)), "@:@");
 
     objc.registerClassPair(MyClass);
     defer objc.disposeClassPair(MyClass);
