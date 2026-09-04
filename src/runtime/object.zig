@@ -118,8 +118,9 @@ pub const Object = struct {
         const setter = setter: {
             if (cls.getProperty(n)) |prop| {
                 if (prop.copyAttributeValue("S")) |val| {
-                    defer std.heap.c_allocator.free(val);
-                    break :setter sel_fn(val);
+                    var owned = val;
+                    defer owned.deinit();
+                    break :setter sel_fn(owned.slice());
                 }
             }
 
@@ -141,8 +142,9 @@ pub const Object = struct {
         const getter = getter: {
             if (cls.getProperty(n)) |prop| {
                 if (prop.copyAttributeValue("G")) |val| {
-                    defer std.heap.c_allocator.free(val);
-                    break :getter sel_fn(val);
+                    var owned = val;
+                    defer owned.deinit();
+                    break :getter sel_fn(owned.slice());
                 }
             }
 

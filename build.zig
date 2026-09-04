@@ -57,6 +57,12 @@ pub fn build(b: *std.Build) !void {
     const test_runtime_step = b.step("test-runtime", "Run runtime subsystem tests");
     test_runtime_step.dependOn(&run_runtime_test.step);
 
+    // Step: test-memory (runs ownership and memory tests)
+    const memory_test = addObjcTest(b, target, optimize, "test-memory", "tests/memory/root.zig", objc_c, add_paths, true);
+    const run_memory_test = b.addRunArtifact(memory_test);
+    const test_memory_step = b.step("test-memory", "Run memory and ownership subsystem tests");
+    test_memory_step.dependOn(&run_memory_test.step);
+
     // Step: test-integration (runs Foundation/AppKit integration tests)
     const integration_test = addObjcTest(b, target, optimize, "test-integration", "tests/integration/root.zig", objc_c, add_paths, true);
     const run_integration_test = b.addRunArtifact(integration_test);
@@ -72,6 +78,7 @@ pub fn build(b: *std.Build) !void {
         "block",
         "autorelease_pool",
         "runtime_introspection",
+        "ownership_and_memory",
     };
 
     for (example_names) |name| {

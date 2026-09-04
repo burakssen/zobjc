@@ -49,3 +49,7 @@ pub const getProtocol = lookup.getProtocol;
 pub const allocateClassPair = lookup.allocateClassPair;
 pub const registerClassPair = lookup.registerClassPair;
 pub const disposeClassPair = lookup.disposeClassPair;
+pub const classes = lookup.classes;
+pub const protocols = lookup.protocols;
+pub const imageNames = lookup.imageNames;
+pub const classNamesForImage = lookup.classNamesForImage;

@@ -57,7 +57,7 @@ flowchart TD
 | :--- | :--- | :---: |
 | `raw/` | Exact Objective-C runtime ABI declarations (`objc.raw.runtime.*`). Direct underlying C calls without convenience behavior, memory policies, or conversions. | Phase 1 |
 | `runtime/` | Typed Objective-C runtime entities: `Object`, `Class`, `Selector`, `Method`, `Ivar`, `Property`, `Protocol`, `Imp`. Conceptual wrappers around runtime handles. Does not own ABI dispatch decisions. | Phase 2 |
-| `memory/` | Ownership and memory management: `AutoreleasePool`, `Retained(T)`, `Weak(T)`, `OwnedSlice(T)`, `OwnedCString`. | Phase 3 |
+| `memory/` | Ownership and memory management: `AutoreleasePool`, `Retained(T)`, `Weak(T)`, `OwnedRuntimeList(T)`, `OwnedCString`, `OwnedMethodDescriptions`, `OwnedPropertyAttributes`, `OwnedCStringList`. (See [docs/ownership.md](file:///Users/burakssen/dev/personal/apple/zobjc/docs/ownership.md)). | Phase 3 |
 | `encoding/` | Objective-C type encodings: `comptimeEncode(T)`, type encoding parser, method encoding string verification. | Phase 4 |
 | `abi/` | Calling-convention classification: answers whether a given target architecture and return aggregate requires `objc_msgSend`, `objc_msgSend_stret`, or `objc_msgSend_fpret`. Independent of classes and selectors. | Phase 5 |
 | `messaging/` | Unified message dispatch: `objc.send`, `objc.sendSuper`, `invoke`. Performs argument coercion and return classification. | Phase 6 |
@@ -147,5 +147,5 @@ To avoid ambiguity, documentation standardizes on these terms:
 - **owned**: A resource whose cleanup responsibility belongs to the receiver.
 - **adopted**: A pointer taken over from a C API without changing reference counts.
 - **copied**: A newly allocated duplicate.
-- **runtime-allocated**: Allocated by `libobjc` (must be freed using `objc.free` or runtime deallocators).
-- **caller-freed**: Explicitly requires the caller to invoke `.deinit()` or `free()`.
+- **runtime-allocated**: Allocated by `libobjc` via C malloc (must be freed using `std.c.free` via `Owned*` wrappers or `objc.free`).
+- **caller-freed**: Explicitly requires the caller to invoke `.deinit()`.

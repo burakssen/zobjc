@@ -15,6 +15,7 @@ const Protocol = @import("protocol.zig").Protocol;
 const Imp = @import("imp.zig").Imp;
 const Object = @import("object.zig").Object;
 const MsgSend = @import("../messaging/msg_send.zig").MsgSend;
+const memory = @import("../memory/root.zig");
 
 pub const Class = struct {
     ptr: *raw.objc_class,
@@ -43,6 +44,11 @@ pub const Class = struct {
     /// Returns the name of the class.
     pub inline fn name(self: Class) [:0]const u8 {
         return conversion.spanCString(raw.runtime.class_getName(self.ptr));
+    }
+
+    /// Alias for name() to match Method, Ivar, Property, Protocol parity.
+    pub inline fn getName(self: Class) [:0]const u8 {
+        return self.name();
     }
 
     /// Returns whether this class is a metaclass.
@@ -120,6 +126,48 @@ pub const Class = struct {
     /// Note: Follows libobjc ownership semantics (returns non-retained instance pointer).
     pub inline fn createInstance(self: Class, extra_bytes: usize) ?Object {
         return Object.fromRaw(raw.runtime.class_createInstance(self.ptr, extra_bytes));
+    }
+
+    /// Creates an uninitialized instance wrapped in strong ownership `Retained(Object)`.
+    pub fn createInstanceRetained(self: Class, extra_bytes: usize) ?memory.Retained(Object) {
+        const raw_obj = raw.runtime.class_createInstance(self.ptr, extra_bytes) orelse return null;
+        return memory.Retained(Object).adopt(Object.fromRawNonNull(raw_obj));
+    }
+
+    /// Returns a caller-freed list of instance methods implemented by this class.
+    pub fn methods(self: Class) memory.OwnedRuntimeList(Method) {
+        var count_val: c_uint = 0;
+        const list = raw.runtime.class_copyMethodList(self.ptr, &count_val);
+        return memory.OwnedRuntimeList(Method).fromRaw(@ptrCast(list), count_val);
+    }
+
+    /// Returns a caller-freed list of class methods implemented by this class (from its metaclass).
+    pub fn classMethods(self: Class) memory.OwnedRuntimeList(Method) {
+        const meta = raw.runtime.object_getClass(@ptrCast(self.ptr)) orelse return memory.OwnedRuntimeList(Method).empty();
+        var count_val: c_uint = 0;
+        const list = raw.runtime.class_copyMethodList(meta, &count_val);
+        return memory.OwnedRuntimeList(Method).fromRaw(@ptrCast(list), count_val);
+    }
+
+    /// Returns a caller-freed list of instance variables declared by this class.
+    pub fn ivars(self: Class) memory.OwnedRuntimeList(Ivar) {
+        var count_val: c_uint = 0;
+        const list = raw.runtime.class_copyIvarList(self.ptr, &count_val);
+        return memory.OwnedRuntimeList(Ivar).fromRaw(@ptrCast(list), count_val);
+    }
+
+    /// Returns a caller-freed list of properties declared by this class.
+    pub fn properties(self: Class) memory.OwnedRuntimeList(Property) {
+        var count_val: c_uint = 0;
+        const list = raw.runtime.class_copyPropertyList(self.ptr, &count_val);
+        return memory.OwnedRuntimeList(Property).fromRaw(@ptrCast(list), count_val);
+    }
+
+    /// Returns a caller-freed list of protocols adopted by this class.
+    pub fn protocols(self: Class) memory.OwnedRuntimeList(Protocol) {
+        var count_val: c_uint = 0;
+        const list = raw.runtime.class_copyProtocolList(self.ptr, &count_val);
+        return memory.OwnedRuntimeList(Protocol).fromRaw(@ptrCast(list), count_val);
     }
 
     /// Tests class equality by comparing pointer addresses.

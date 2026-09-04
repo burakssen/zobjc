@@ -6,6 +6,7 @@ const std = @import("std");
 const raw = @import("../raw/root.zig");
 const Class = @import("class.zig").Class;
 const Protocol = @import("protocol.zig").Protocol;
+const memory = @import("../memory/root.zig");
 
 /// Looks up a class by name, returning null if not found.
 pub inline fn getClass(name: [:0]const u8) ?Class {
@@ -52,4 +53,37 @@ pub fn registerClassPair(cls: Class) void {
 /// Disposes a class pair registered with `allocateClassPair`.
 pub fn disposeClassPair(cls: Class) void {
     raw.runtime.objc_disposeClassPair(cls.ptr);
+}
+
+// --- Global Runtime Enumeration ---
+
+/// Returns a caller-freed list of all registered Objective-C classes.
+pub fn classes() memory.OwnedRuntimeList(Class) {
+    var count_val: c_uint = 0;
+    const list = raw.runtime.objc_copyClassList(&count_val);
+    return memory.OwnedRuntimeList(Class).fromRaw(@ptrCast(list), count_val);
+}
+
+/// Returns a caller-freed list of all registered Objective-C protocols.
+pub fn protocols() memory.OwnedRuntimeList(Protocol) {
+    var count_val: c_uint = 0;
+    const list = raw.runtime.objc_copyProtocolList(&count_val);
+    return memory.OwnedRuntimeList(Protocol).fromRaw(@ptrCast(list), count_val);
+}
+
+/// Returns a caller-freed list of all loaded dynamic library image names.
+pub fn imageNames() memory.OwnedCStringList {
+    var count_val: c_uint = 0;
+    const list = raw.runtime.objc_copyImageNames(&count_val);
+    return memory.OwnedCStringList.fromRaw(list, count_val);
+}
+
+/// Returns a caller-freed list of class names declared in the given image, or null if image not found.
+pub fn classNamesForImage(image: [:0]const u8) ?memory.OwnedCStringList {
+    var count_val: c_uint = 0;
+    const list = raw.runtime.objc_copyClassNamesForImage(image.ptr, &count_val);
+    if (list) |l| {
+        return memory.OwnedCStringList.fromRaw(l, count_val);
+    }
+    return null;
 }

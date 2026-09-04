@@ -31,8 +31,9 @@ test "property: dynamic class property introspection" {
 
     // Copy single attribute value
     if (prop.copyAttributeValue("V")) |val| {
-        defer std.heap.c_allocator.free(val);
-        try testing.expectEqualStrings("_title", val);
+        var owned = val;
+        defer owned.deinit();
+        try testing.expectEqualStrings("_title", owned.slice());
     } else {
         return error.AttributeValueNotFound;
     }

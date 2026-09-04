@@ -8,6 +8,7 @@ const conversion = @import("conversion.zig");
 const Selector = @import("selector.zig").Selector;
 const Imp = @import("imp.zig").Imp;
 const MethodDescription = @import("method_description.zig").MethodDescription;
+const memory = @import("../memory/root.zig");
 
 pub const Method = struct {
     ptr: *raw.objc_method,
@@ -38,6 +39,16 @@ pub const Method = struct {
         return Imp.fromRaw(raw.runtime.method_getImplementation(self.ptr)).?;
     }
 
+    /// Alias for selector() to match naming parity.
+    pub inline fn getName(self: Method) Selector {
+        return self.selector();
+    }
+
+    /// Alias for implementation() to match naming parity.
+    pub inline fn getImplementation(self: Method) Imp {
+        return self.implementation();
+    }
+
     /// Returns a borrowed string describing the method's parameter and return types.
     pub inline fn typeEncoding(self: Method) ?[:0]const u8 {
         return conversion.spanNullableCString(raw.runtime.method_getTypeEncoding(self.ptr));
@@ -56,6 +67,18 @@ pub const Method = struct {
     /// Writes a single argument type string into a caller-provided buffer without heap allocation.
     pub inline fn argumentType(self: Method, index: u32, buffer: []u8) void {
         raw.runtime.method_getArgumentType(self.ptr, @intCast(index), buffer.ptr, buffer.len);
+    }
+
+    /// Returns a caller-freed C string describing the method's return type, or null.
+    pub inline fn copyReturnType(self: Method) ?memory.OwnedCString {
+        const raw_str = raw.runtime.method_copyReturnType(self.ptr);
+        return memory.OwnedCString.fromRaw(raw_str);
+    }
+
+    /// Returns a caller-freed C string describing the method's argument type at index, or null.
+    pub inline fn copyArgumentType(self: Method, index: u32) ?memory.OwnedCString {
+        const raw_str = raw.runtime.method_copyArgumentType(self.ptr, @intCast(index));
+        return memory.OwnedCString.fromRaw(raw_str);
     }
 
     /// Returns a pointer to a method description structure.

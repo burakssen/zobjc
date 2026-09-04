@@ -76,7 +76,7 @@ test "compatibility: Block definition and invocation" {
 }
 
 test "compatibility: AutoreleasePool" {
-    const pool = objc.AutoreleasePool.init();
+    var pool = objc.AutoreleasePool.init();
     defer pool.deinit();
 
     const NSObject = objc.getClass("NSObject").?;

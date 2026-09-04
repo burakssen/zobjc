@@ -4,7 +4,7 @@ const std = @import("std");
 const objc = @import("objc");
 
 pub fn main() void {
-    const pool = objc.AutoreleasePool.init();
+    var pool = objc.AutoreleasePool.init();
     defer pool.deinit();
 
     const NSDate = objc.getClass("NSDate") orelse return;

@@ -16,7 +16,7 @@ test "messaging: class method and instance method invocation" {
 }
 
 test "messaging: scalar arguments and return values" {
-    const pool = objc.AutoreleasePool.init();
+    var pool = objc.AutoreleasePool.init();
     defer pool.deinit();
 
     const NSNumber = objc.getClass("NSNumber").?;
@@ -33,7 +33,7 @@ test "messaging: scalar arguments and return values" {
 }
 
 test "messaging: struct arguments (NSPoint/NSRange/etc)" {
-    const pool = objc.AutoreleasePool.init();
+    var pool = objc.AutoreleasePool.init();
     defer pool.deinit();
 
     const NSString = objc.getClass("NSString").?;

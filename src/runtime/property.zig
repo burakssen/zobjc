@@ -5,6 +5,7 @@
 const std = @import("std");
 const raw = @import("../raw/root.zig");
 const conversion = @import("conversion.zig");
+const memory = @import("../memory/root.zig");
 
 pub const Property = struct {
     ptr: *raw.objc_property,
@@ -35,9 +36,17 @@ pub const Property = struct {
         return conversion.spanNullableCString(raw.runtime.property_getAttributes(self.ptr));
     }
 
-    /// Returns the value of a property attribute given the attribute name. Must be freed with free() if non-null.
-    pub inline fn copyAttributeValue(self: Property, attr: [:0]const u8) ?[:0]u8 {
-        return conversion.spanNullableMutableCString(raw.runtime.property_copyAttributeValue(self.ptr, attr.ptr));
+    /// Returns a caller-freed C string containing the value of a property attribute.
+    pub inline fn copyAttributeValue(self: Property, attr: [:0]const u8) ?memory.OwnedCString {
+        const raw_val = raw.runtime.property_copyAttributeValue(self.ptr, attr.ptr);
+        return memory.OwnedCString.fromRaw(raw_val);
+    }
+
+    /// Returns a caller-freed list of attributes declared by this property.
+    pub fn attributesList(self: Property) memory.OwnedPropertyAttributes {
+        var count_val: c_uint = 0;
+        const list = raw.runtime.property_copyAttributeList(self.ptr, &count_val);
+        return memory.OwnedPropertyAttributes.fromRaw(list, count_val);
     }
 
     /// Tests property equality by comparing pointer addresses.

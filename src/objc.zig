@@ -44,20 +44,44 @@ pub const getProtocol = runtime.getProtocol;
 pub const allocateClassPair = runtime.allocateClassPair;
 pub const registerClassPair = runtime.registerClassPair;
 pub const disposeClassPair = runtime.disposeClassPair;
+pub const classes = runtime.classes;
+pub const protocols = runtime.protocols;
 pub const sel = runtime.sel;
 
-// Block & Memory subsystems
-pub const Block = block.Block;
+// Memory subsystem
+pub const Retained = memory.Retained;
+pub const Weak = memory.Weak;
+pub const OwnedCString = memory.OwnedCString;
+pub const OwnedRuntimeList = memory.OwnedRuntimeList;
+pub const OwnedMethodDescriptions = memory.OwnedMethodDescriptions;
+pub const OwnedPropertyAttributes = memory.OwnedPropertyAttributes;
+pub const OwnedCStringList = memory.OwnedCStringList;
 pub const AutoreleasePool = memory.AutoreleasePool;
+
+// Block subsystem
+pub const Block = block.Block;
 
 // Encoding subsystem
 pub const Encoding = encoding.Encoding;
 pub const comptimeEncode = encoding.comptimeEncode;
 
 /// Free memory allocated by the Objective-C runtime C allocator.
-// TODO(phase-3): Deprecate manual free in favor of owned wrappers.
+///
+/// NOTE: In Phase 3, preferred usage is the owned wrappers:
+/// `OwnedCString`, `OwnedRuntimeList(T)`, `OwnedMethodDescriptions`, etc.
 pub inline fn free(ptr: anytype) void {
-    std.heap.c_allocator.free(ptr);
+    const T = @TypeOf(ptr);
+    if (@typeInfo(T) == .pointer and @typeInfo(T).pointer.size == .slice) {
+        if (ptr.len > 0) {
+            std.c.free(@ptrCast(@constCast(ptr.ptr)));
+        }
+    } else if (@typeInfo(T) == .optional) {
+        if (ptr) |unwrapped| {
+            free(unwrapped);
+        }
+    } else {
+        std.c.free(@ptrCast(@constCast(ptr)));
+    }
 }
 
 test {

@@ -30,6 +30,11 @@ pub const Ivar = struct {
         return conversion.spanNullableCString(raw.runtime.ivar_getName(self.ptr));
     }
 
+    /// Alias for name() to match naming parity.
+    pub inline fn getName(self: Ivar) ?[:0]const u8 {
+        return self.name();
+    }
+
     /// Returns the type encoding string of the instance variable.
     pub inline fn typeEncoding(self: Ivar) ?[:0]const u8 {
         return conversion.spanNullableCString(raw.runtime.ivar_getTypeEncoding(self.ptr));
