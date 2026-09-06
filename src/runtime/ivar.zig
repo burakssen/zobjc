@@ -5,6 +5,7 @@
 const std = @import("std");
 const raw = @import("../raw/root.zig");
 const conversion = @import("conversion.zig");
+const encoding = @import("../encoding/root.zig");
 
 pub const Ivar = struct {
     ptr: *raw.objc_ivar,
@@ -48,6 +49,12 @@ pub const Ivar = struct {
     /// Tests ivar equality by comparing pointer addresses.
     pub inline fn eql(self: Ivar, other: Ivar) bool {
         return self.ptr == other.ptr;
+    }
+
+    /// Parses the instance variable's type encoding into a structured `QualifiedType`.
+    pub fn parsedType(self: Ivar, allocator: std.mem.Allocator) !?encoding.QualifiedType {
+        const enc = self.typeEncoding() orelse return null;
+        return try encoding.parse(allocator, enc);
     }
 
     comptime {

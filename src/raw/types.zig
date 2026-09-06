@@ -62,10 +62,12 @@ pub const IMP = ?*const fn () callconv(.c) void;
 /// - macOS and Mac Catalyst: signed char (`i8`) for historical ABI compatibility.
 /// - 32-bit legacy iOS: signed char (`i8`).
 /// - 64-bit iOS, tvOS, watchOS, visionOS: C99 bool (`bool`).
-pub const objc_bool_is_bool = switch (builtin.os.tag) {
-    .macos => false,
-    .ios, .tvos, .watchos, .visionos => builtin.cpu.arch.is64(),
-    else => false,
+pub const objc_bool_is_bool = switch (builtin.cpu.arch) {
+    .aarch64 => true,
+    else => switch (builtin.os.tag) {
+        .ios, .tvos, .watchos, .visionos => builtin.cpu.arch.is64(),
+        else => false,
+    },
 };
 
 pub const BOOL = if (objc_bool_is_bool) bool else i8;

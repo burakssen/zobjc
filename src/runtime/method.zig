@@ -9,6 +9,7 @@ const Selector = @import("selector.zig").Selector;
 const Imp = @import("imp.zig").Imp;
 const MethodDescription = @import("method_description.zig").MethodDescription;
 const memory = @import("../memory/root.zig");
+const encoding = @import("../encoding/root.zig");
 
 pub const Method = struct {
     ptr: *raw.objc_method,
@@ -100,6 +101,12 @@ pub const Method = struct {
     /// Tests method equality by comparing pointer addresses.
     pub inline fn eql(self: Method, other: Method) bool {
         return self.ptr == other.ptr;
+    }
+
+    /// Parses the method's runtime type encoding into a structured `MethodSignature`.
+    pub fn parsedSignature(self: Method, allocator: std.mem.Allocator) !encoding.MethodSignature {
+        const enc = self.typeEncoding() orelse return error.MissingTypeEncoding;
+        return encoding.parseMethod(allocator, enc);
     }
 
     comptime {

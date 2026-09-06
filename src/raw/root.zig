@@ -35,6 +35,7 @@ pub const Category = types.Category;
 pub const BOOL = types.BOOL;
 pub const YES = types.YES;
 pub const NO = types.NO;
+pub const objc_bool_is_bool = types.objc_bool_is_bool;
 
 pub const objc_super = types.objc_super;
 pub const objc_method_description = types.objc_method_description;
@@ -44,13 +45,13 @@ pub const objc_property_attribute_t = types.objc_property_attribute_t;
 
 /// Converts a target-specific Objective-C BOOL into a Zig bool.
 pub inline fn boolResult(result: BOOL) bool {
-    if (@TypeOf(BOOL) == bool) return result;
+    if (BOOL == bool) return result;
     return result == 1;
 }
 
 /// Converts a Zig bool into a target-specific Objective-C BOOL.
 pub inline fn boolParam(param: bool) BOOL {
-    if (@TypeOf(BOOL) == bool) return param;
+    if (BOOL == bool) return param;
     return @intFromBool(param);
 }
 

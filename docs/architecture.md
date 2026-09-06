@@ -58,7 +58,7 @@ flowchart TD
 | `raw/` | Exact Objective-C runtime ABI declarations (`objc.raw.runtime.*`). Direct underlying C calls without convenience behavior, memory policies, or conversions. | Phase 1 |
 | `runtime/` | Typed Objective-C runtime entities: `Object`, `Class`, `Selector`, `Method`, `Ivar`, `Property`, `Protocol`, `Imp`. Conceptual wrappers around runtime handles. Does not own ABI dispatch decisions. | Phase 2 |
 | `memory/` | Ownership and memory management: `AutoreleasePool`, `Retained(T)`, `Weak(T)`, `OwnedRuntimeList(T)`, `OwnedCString`, `OwnedMethodDescriptions`, `OwnedPropertyAttributes`, `OwnedCStringList`. (See [docs/ownership.md](file:///Users/burakssen/dev/personal/apple/zobjc/docs/ownership.md)). | Phase 3 |
-| `encoding/` | Objective-C type encodings: `comptimeEncode(T)`, type encoding parser, method encoding string verification. | Phase 4 |
+| `encoding/` | Objective-C type encodings: `comptimeEncode(T)`, AST representations, recursive-descent type and method parser, callback validation, and property attributes. (See [docs/encoding.md](file:///Users/burakssen/dev/personal/apple/zobjc/docs/encoding.md)). | Phase 4 |
 | `abi/` | Calling-convention classification: answers whether a given target architecture and return aggregate requires `objc_msgSend`, `objc_msgSend_stret`, or `objc_msgSend_fpret`. Independent of classes and selectors. | Phase 5 |
 | `messaging/` | Unified message dispatch: `objc.send`, `objc.sendSuper`, `invoke`. Performs argument coercion and return classification. | Phase 6 |
 | `builder/` | Dynamic metaprogramming builders: `ClassBuilder`, `ProtocolBuilder`. Fluent construction of runtime classes and protocols. | Phase 7 |

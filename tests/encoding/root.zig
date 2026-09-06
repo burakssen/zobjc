@@ -1,15 +1,25 @@
-//! Baseline behavioral tests for the encoding subsystem.
+//! Master test suite for the Objective-C encoding subsystem.
 
 const std = @import("std");
 const objc = @import("objc");
 const testing = std.testing;
+
+test {
+    _ = @import("primitive_test.zig");
+    _ = @import("aggregate_test.zig");
+    _ = @import("parser_test.zig");
+    _ = @import("method_test.zig");
+    _ = @import("property_test.zig");
+    _ = @import("differential_test.zig");
+    _ = @import("corpus_test.zig");
+}
 
 fn expectEncoding(comptime T: type, expected: []const u8) !void {
     const enc = comptime objc.comptimeEncode(T);
     try testing.expectEqualStrings(expected, &enc);
 }
 
-test "encoding: primitives" {
+test "encoding: primitives baseline" {
     try expectEncoding(i8, "c");
     try expectEncoding(i32, "i");
     try expectEncoding(i64, "q");
@@ -22,18 +32,19 @@ test "encoding: primitives" {
     try expectEncoding(void, "v");
 }
 
-test "encoding: pointers and strings" {
-    try expectEncoding([*c]const u8, "*");
+test "encoding: pointers and strings baseline" {
+    try expectEncoding([*c]const u8, "r*");
+    try expectEncoding([*c]u8, "*");
     try expectEncoding(*i32, "^i");
     try expectEncoding(**i32, "^^i");
     try expectEncoding(?*i32, "^i");
 }
 
-test "encoding: arrays" {
+test "encoding: arrays baseline" {
     try expectEncoding([8]i32, "[8i]");
 }
 
-test "encoding: extern structs" {
+test "encoding: extern structs baseline" {
     const Point = extern struct {
         x: f64,
         y: f64,
@@ -43,7 +54,7 @@ test "encoding: extern structs" {
     try expectEncoding(**Point, "^^{Point}");
 }
 
-test "encoding: functions" {
+test "encoding: functions baseline" {
     const F = fn (objc.c.id, objc.c.SEL, i32) callconv(.c) i32;
     try expectEncoding(F, "i@:i");
 }

@@ -63,6 +63,12 @@ pub fn build(b: *std.Build) !void {
     const test_memory_step = b.step("test-memory", "Run memory and ownership subsystem tests");
     test_memory_step.dependOn(&run_memory_test.step);
 
+    // Step: test-encoding (runs encoding subsystem tests)
+    const encoding_test = addObjcTest(b, target, optimize, "test-encoding", "tests/encoding/root.zig", objc_c, add_paths, true);
+    const run_encoding_test = b.addRunArtifact(encoding_test);
+    const test_encoding_step = b.step("test-encoding", "Run encoding and signature subsystem tests");
+    test_encoding_step.dependOn(&run_encoding_test.step);
+
     // Step: test-integration (runs Foundation/AppKit integration tests)
     const integration_test = addObjcTest(b, target, optimize, "test-integration", "tests/integration/root.zig", objc_c, add_paths, true);
     const run_integration_test = b.addRunArtifact(integration_test);
@@ -79,6 +85,7 @@ pub fn build(b: *std.Build) !void {
         "autorelease_pool",
         "runtime_introspection",
         "ownership_and_memory",
+        "type_encodings",
     };
 
     for (example_names) |name| {
@@ -135,6 +142,12 @@ fn addObjcTest(
         addAppleSDK(b, mod) catch {};
         addAppleSDK(b, objc_facade) catch {};
     }
+
+    mod.addCSourceFile(.{
+        .file = b.path("tests/fixtures/encoding/fixtures.m"),
+        .flags = &.{},
+    });
+    mod.addIncludePath(b.path("tests/fixtures/encoding"));
 
     const test_artifact = b.addTest(.{
         .name = name,

@@ -64,6 +64,7 @@ pub const Block = block.Block;
 // Encoding subsystem
 pub const Encoding = encoding.Encoding;
 pub const comptimeEncode = encoding.comptimeEncode;
+pub const methodEncoding = encoding.methodEncoding;
 
 /// Free memory allocated by the Objective-C runtime C allocator.
 ///

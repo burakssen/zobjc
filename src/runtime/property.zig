@@ -6,6 +6,7 @@ const std = @import("std");
 const raw = @import("../raw/root.zig");
 const conversion = @import("conversion.zig");
 const memory = @import("../memory/root.zig");
+const encoding = @import("../encoding/root.zig");
 
 pub const Property = struct {
     ptr: *raw.objc_property,
@@ -52,6 +53,12 @@ pub const Property = struct {
     /// Tests property equality by comparing pointer addresses.
     pub inline fn eql(self: Property, other: Property) bool {
         return self.ptr == other.ptr;
+    }
+
+    /// Parses the declared property's attributes into a structured `PropertyEncoding`.
+    pub fn parse(self: Property, allocator: std.mem.Allocator) !encoding.PropertyEncoding {
+        const attrs = self.attributes() orelse "";
+        return encoding.parseProperty(allocator, attrs);
     }
 
     // --- Backward Compatibility Aliases ---
