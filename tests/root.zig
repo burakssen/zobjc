@@ -8,6 +8,7 @@ test {
     _ = @import("memory/root.zig");
     _ = @import("messaging/root.zig");
     _ = @import("encoding/root.zig");
+    _ = @import("abi/root.zig");
     _ = @import("block/root.zig");
     _ = @import("integration/root.zig");
 }

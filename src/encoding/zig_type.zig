@@ -33,7 +33,8 @@ pub fn isObjCEncodable(comptime T: type) bool {
         T == c_int or T == c_uint or T == c_long or T == c_ulong or
         T == c_longlong or T == c_ulonglong or T == f32 or T == f64 or
         T == c_longdouble or T == i8 or T == u8 or T == i16 or T == u16 or
-        T == i32 or T == u32 or T == i64 or T == u64 or T == i128 or T == u128)
+        T == i32 or T == u32 or T == i64 or T == u64 or T == isize or T == usize or
+        T == i128 or T == u128)
     {
         return true;
     }
@@ -60,7 +61,7 @@ pub fn isObjCEncodable(comptime T: type) bool {
         },
         .@"struct" => |s| switch (s.layout) {
             .@"extern" => {
-                for (s.fields) |field| {
+                inline for (s.fields) |field| {
                     if (!isObjCEncodable(field.type)) return false;
                 }
                 return true;
@@ -69,7 +70,7 @@ pub fn isObjCEncodable(comptime T: type) bool {
         },
         .@"union" => |u| switch (u.layout) {
             .@"extern" => {
-                for (u.fields) |field| {
+                inline for (u.fields) |field| {
                     if (!isObjCEncodable(field.type)) return false;
                 }
                 return true;
@@ -80,7 +81,7 @@ pub fn isObjCEncodable(comptime T: type) bool {
             if (!f.calling_convention.eql(std.builtin.CallingConvention.c)) break :blk false;
             const rt = f.return_type orelse break :blk false;
             if (!isObjCEncodable(rt)) break :blk false;
-            for (f.params) |p| {
+            inline for (f.params) |p| {
                 const pt = p.type orelse break :blk false;
                 if (!isObjCEncodable(pt)) break :blk false;
             }
@@ -93,44 +94,44 @@ pub fn isObjCEncodable(comptime T: type) bool {
 /// Asserts at compile-time that `T` is valid for Objective-C type encoding.
 /// Emits specific, actionable compiler errors when invalid.
 pub fn assertObjCEncodable(comptime T: type) void {
-    if (isObjCEncodable(T)) return;
-
-    switch (@typeInfo(T)) {
-        .@"struct" => |s| switch (s.layout) {
-            .auto => @compileError("Objective-C encoding requires a C ABI-compatible aggregate. Type '" ++ @typeName(T) ++ "' is a Zig-layout struct. Use 'extern struct' for Objective-C/C interop."),
-            .@"packed" => @compileError("packed struct '" ++ @typeName(T) ++ "' is not supported for Objective-C encoding."),
-            .@"extern" => {
-                inline for (s.fields) |f| {
-                    assertObjCEncodable(f.type);
+    if (comptime !isObjCEncodable(T)) {
+        switch (@typeInfo(T)) {
+            .@"struct" => |s| switch (s.layout) {
+                .auto => @compileError("Objective-C encoding requires a C ABI-compatible aggregate. Type '" ++ @typeName(T) ++ "' is a Zig-layout struct. Use 'extern struct' for Objective-C/C interop."),
+                .@"packed" => @compileError("packed struct '" ++ @typeName(T) ++ "' is not supported for Objective-C encoding."),
+                .@"extern" => {
+                    inline for (s.fields) |f| {
+                        assertObjCEncodable(f.type);
+                    }
+                },
+            },
+            .@"union" => |u| switch (u.layout) {
+                .@"extern" => {
+                    inline for (u.fields) |f| {
+                        assertObjCEncodable(f.type);
+                    }
+                },
+                else => @compileError("tagged union '" ++ @typeName(T) ++ "' is not supported for Objective-C encoding. Use 'extern union'."),
+            },
+            .pointer => |p| switch (p.size) {
+                .slice => @compileError("slice '" ++ @typeName(T) ++ "' is a fat pointer and not C ABI compatible; use a pointer or array."),
+                else => assertObjCEncodable(p.child),
+            },
+            .@"fn" => |f| {
+                if (!f.calling_convention.eql(std.builtin.CallingConvention.c)) {
+                    @compileError("function type '" ++ @typeName(T) ++ "' must use callconv(.c) for Objective-C encoding.");
+                }
+                if (f.return_type) |rt| {
+                    assertObjCEncodable(rt);
+                }
+                inline for (f.params) |p| {
+                    if (p.type) |pt| {
+                        assertObjCEncodable(pt);
+                    }
                 }
             },
-        },
-        .@"union" => |u| switch (u.layout) {
-            .@"extern" => {
-                inline for (u.fields) |f| {
-                    assertObjCEncodable(f.type);
-                }
-            },
-            else => @compileError("tagged union '" ++ @typeName(T) ++ "' is not supported for Objective-C encoding. Use 'extern union'."),
-        },
-        .pointer => |p| switch (p.size) {
-            .slice => @compileError("slice '" ++ @typeName(T) ++ "' is a fat pointer and not C ABI compatible; use a pointer or array."),
-            else => assertObjCEncodable(p.child),
-        },
-        .@"fn" => |f| {
-            if (!f.calling_convention.eql(std.builtin.CallingConvention.c)) {
-                @compileError("function type '" ++ @typeName(T) ++ "' must use callconv(.c) for Objective-C encoding.");
-            }
-            if (f.return_type) |rt| {
-                assertObjCEncodable(rt);
-            }
-            inline for (f.params) |p| {
-                if (p.type) |pt| {
-                    assertObjCEncodable(pt);
-                }
-            }
-        },
-        else => @compileError("type '" ++ @typeName(T) ++ "' is not supported for Objective-C type encoding."),
+            else => @compileError("type '" ++ @typeName(T) ++ "' is not supported for Objective-C type encoding."),
+        }
     }
 }
 

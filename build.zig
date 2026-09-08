@@ -69,6 +69,12 @@ pub fn build(b: *std.Build) !void {
     const test_encoding_step = b.step("test-encoding", "Run encoding and signature subsystem tests");
     test_encoding_step.dependOn(&run_encoding_test.step);
 
+    // Step: test-abi (runs Darwin ABI classification tests)
+    const abi_test = addObjcTest(b, target, optimize, "test-abi", "tests/abi/root.zig", objc_c, add_paths, true);
+    const run_abi_test = b.addRunArtifact(abi_test);
+    const test_abi_step = b.step("test-abi", "Run Darwin ABI classification subsystem tests");
+    test_abi_step.dependOn(&run_abi_test.step);
+
     // Step: test-integration (runs Foundation/AppKit integration tests)
     const integration_test = addObjcTest(b, target, optimize, "test-integration", "tests/integration/root.zig", objc_c, add_paths, true);
     const run_integration_test = b.addRunArtifact(integration_test);
@@ -86,6 +92,7 @@ pub fn build(b: *std.Build) !void {
         "runtime_introspection",
         "ownership_and_memory",
         "type_encodings",
+        "abi_classification",
     };
 
     for (example_names) |name| {

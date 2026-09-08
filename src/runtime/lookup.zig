@@ -28,6 +28,8 @@ pub inline fn requireClass(name: [:0]const u8) Class {
 
 /// Looks up the metaclass for a class by name, returning null if not found.
 pub inline fn getMetaClass(name: [:0]const u8) ?Class {
+    // Avoid triggering Apple libobjc's noisy `_objc_inform` warning on stderr when the class is not linked.
+    if (getClass(name) == null) return null;
     return Class.fromRaw(raw.runtime.objc_getMetaClass(name.ptr));
 }
 

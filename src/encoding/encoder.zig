@@ -54,7 +54,8 @@ pub fn encodedLength(comptime T: type) usize {
             T == c_short or T == i16 or T == c_ushort or T == u16 or
             T == c_int or T == i32 or T == c_uint or T == u32 or
             T == c_long or T == c_ulong or T == c_longlong or T == i64 or
-            T == c_ulonglong or T == u64 or T == f32 or T == f64 or
+            T == c_ulonglong or T == u64 or T == isize or T == usize or
+            T == f32 or T == f64 or
             T == c_longdouble or T == i128 or T == u128)
         {
             return 1;
@@ -255,12 +256,12 @@ fn writeComptimeType(comptime T: type, buf: []u8, idx: *usize, comptime ptr_dept
             idx.* += 1;
             return;
         }
-        if (T == c_longlong or T == i64) {
+        if (T == c_longlong or T == i64 or T == isize) {
             buf[idx.*] = 'q';
             idx.* += 1;
             return;
         }
-        if (T == c_ulonglong or T == u64) {
+        if (T == c_ulonglong or T == u64 or T == usize) {
             buf[idx.*] = 'Q';
             idx.* += 1;
             return;
