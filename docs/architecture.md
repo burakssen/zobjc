@@ -60,7 +60,7 @@ flowchart TD
 | `memory/` | Ownership and memory management: `AutoreleasePool`, `Retained(T)`, `Weak(T)`, `OwnedRuntimeList(T)`, `OwnedCString`, `OwnedMethodDescriptions`, `OwnedPropertyAttributes`, `OwnedCStringList`. (See [docs/ownership.md](file:///Users/burakssen/dev/personal/apple/zobjc/docs/ownership.md)). | Phase 3 |
 | `encoding/` | Objective-C type encodings: `comptimeEncode(T)`, AST representations, recursive-descent type and method parser, callback validation, and property attributes. (See [docs/encoding.md](file:///Users/burakssen/dev/personal/apple/zobjc/docs/encoding.md)). | Phase 4 |
 | `abi/` | Calling-convention classification: answers whether a given target architecture and return aggregate requires `objc_msgSend`, `objc_msgSend_stret`, `objc_msgSend_fpret`, or `objc_msgSend_fp2ret`. Pure compile-time decision engine. (See [docs/abi.md](file:///Users/burakssen/dev/personal/apple/zobjc/docs/abi.md)). | Phase 5 |
-| `messaging/` | Unified message dispatch: `objc.send`, `objc.sendSuper`, `invoke`. Performs argument coercion and return classification. | Phase 6 |
+| `messaging/` | Unified message dispatch: `objc.send`, `objc.sendSuper`, `invoke`, `objc.callImp`. Performs argument normalization, compile-time validation, and Phase 5 ABI routing. (See [docs/messaging.md](messaging.md)). | Phase 6 |
 | `builder/` | Dynamic metaprogramming builders: `ClassBuilder`, `ProtocolBuilder`. Fluent construction of runtime classes and protocols. | Phase 7 |
 | `block/` | Objective-C Blocks implementation: stack block layout, copying, invoking, and descriptor memory management. | Phase 8 |
 | `internal/` | Private utilities (platform detection, assertions, casts). Consumers must never depend on `internal`. | Phase 0 |

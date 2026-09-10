@@ -14,16 +14,31 @@ const PropertyAttribute = @import("property_attribute.zig").PropertyAttribute;
 const Protocol = @import("protocol.zig").Protocol;
 const Imp = @import("imp.zig").Imp;
 const Object = @import("object.zig").Object;
-const MsgSend = @import("../messaging/msg_send.zig").MsgSend;
 const memory = @import("../memory/root.zig");
 
 pub const Class = struct {
     ptr: *raw.objc_class,
 
-    // Legacy msgSend compatibility delegation
-    const msg_send = MsgSend(Class, Object);
-    pub const msgSend = msg_send.msgSend;
-    pub const msgSendSuper = msg_send.msgSendSuper;
+    /// Dispatches an Objective-C class message to this class.
+    pub inline fn send(
+        self: Class,
+        comptime Return: type,
+        selector: anytype,
+        args: anytype,
+    ) Return {
+        const messaging = @import("../messaging/root.zig");
+        return messaging.send(Return, self, selector, args);
+    }
+
+    /// Dispatches an Objective-C class message to this class (backward compatibility alias).
+    pub inline fn msgSend(
+        self: Class,
+        comptime Return: type,
+        selector: anytype,
+        args: anytype,
+    ) Return {
+        return self.send(Return, selector, args);
+    }
 
     /// Converts a raw nullable `raw.Class` into an optional `Class`.
     pub inline fn fromRaw(val: raw.Class) ?Class {

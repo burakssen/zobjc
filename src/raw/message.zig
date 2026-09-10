@@ -18,6 +18,11 @@ pub extern "c" fn objc_msgSend() void;
 /// Mirrors `objc_msgSendSuper` from <objc/message.h>. Must be cast to the target signature before calling.
 pub extern "c" fn objc_msgSendSuper() void;
 
+/// Sends a message to the superclass using Super2 semantics (starts lookup at current_class->superclass).
+///
+/// Exported by Apple's libobjc. Must be cast to the target signature before calling.
+pub extern "c" fn objc_msgSendSuper2() void;
+
 /// Directly invokes the implementation of a method.
 ///
 /// Mirrors `method_invoke` from <objc/message.h>. Must be cast before calling.
@@ -49,6 +54,16 @@ pub const objc_msgSendSuper_stret = if (availability.has_msgSendStret)
     }.objc_msgSendSuper_stret
 else
     @compileError("objc_msgSendSuper_stret is unavailable on this architecture (ARM64)");
+
+/// Structure-returning message send to a superclass using Super2 semantics.
+///
+/// Unavailable on ARM64. Exported by Apple's libobjc on x86_64.
+pub const objc_msgSendSuper2_stret = if (availability.has_msgSendStret)
+    struct {
+        pub extern "c" fn objc_msgSendSuper2_stret() void;
+    }.objc_msgSendSuper2_stret
+else
+    @compileError("objc_msgSendSuper2_stret is unavailable on this architecture (ARM64)");
 
 /// Structure-returning direct method invocation.
 ///

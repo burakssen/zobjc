@@ -75,6 +75,12 @@ pub fn build(b: *std.Build) !void {
     const test_abi_step = b.step("test-abi", "Run Darwin ABI classification subsystem tests");
     test_abi_step.dependOn(&run_abi_test.step);
 
+    // Step: test-messaging (runs unified messaging subsystem tests)
+    const messaging_test = addObjcTest(b, target, optimize, "test-messaging", "tests/messaging/root.zig", objc_c, add_paths, true);
+    const run_messaging_test = b.addRunArtifact(messaging_test);
+    const test_messaging_step = b.step("test-messaging", "Run unified messaging subsystem tests");
+    test_messaging_step.dependOn(&run_messaging_test.step);
+
     // Step: test-integration (runs Foundation/AppKit integration tests)
     const integration_test = addObjcTest(b, target, optimize, "test-integration", "tests/integration/root.zig", objc_c, add_paths, true);
     const run_integration_test = b.addRunArtifact(integration_test);
@@ -93,6 +99,7 @@ pub fn build(b: *std.Build) !void {
         "ownership_and_memory",
         "type_encodings",
         "abi_classification",
+        "messaging",
     };
 
     for (example_names) |name| {
@@ -155,6 +162,12 @@ fn addObjcTest(
         .flags = &.{},
     });
     mod.addIncludePath(b.path("tests/fixtures/encoding"));
+
+    mod.addCSourceFile(.{
+        .file = b.path("tests/fixtures/abi/fixtures.m"),
+        .flags = &.{},
+    });
+    mod.addIncludePath(b.path("tests/fixtures/abi"));
 
     const test_artifact = b.addTest(.{
         .name = name,

@@ -10,16 +10,54 @@ const Selector = @import("selector.zig").Selector;
 const sel_fn = @import("selector.zig").sel;
 const Ivar = @import("ivar.zig").Ivar;
 const Iterator = @import("iterator.zig").Iterator;
-const MsgSend = @import("../messaging/msg_send.zig").MsgSend;
-
 /// A non-owning, non-null handle to an Objective-C object instance (`id`).
 pub const Object = struct {
     ptr: *raw.objc_object,
 
-    // Implement msgSend and msgSendSuper
-    const msg_send = MsgSend(Object, Object);
-    pub const msgSend = msg_send.msgSend;
-    pub const msgSendSuper = msg_send.msgSendSuper;
+    /// Dispatches an Objective-C message to this object.
+    pub inline fn send(
+        self: Object,
+        comptime Return: type,
+        selector: anytype,
+        args: anytype,
+    ) Return {
+        const messaging = @import("../messaging/root.zig");
+        return messaging.send(Return, self, selector, args);
+    }
+
+    /// Dispatches an Objective-C message to this object (backward compatibility alias).
+    pub inline fn msgSend(
+        self: Object,
+        comptime Return: type,
+        selector: anytype,
+        args: anytype,
+    ) Return {
+        return self.send(Return, selector, args);
+    }
+
+    /// Dispatches an Objective-C message to this object's superclass (Super2 semantics).
+    pub inline fn sendSuper(
+        self: Object,
+        comptime Return: type,
+        current_class: anytype,
+        selector: anytype,
+        args: anytype,
+    ) Return {
+        const messaging = @import("../messaging/root.zig");
+        return messaging.sendSuper(Return, self, current_class, selector, args);
+    }
+
+    /// Dispatches an Objective-C message to this object's superclass (backward compatibility alias).
+    pub inline fn msgSendSuper(
+        self: Object,
+        superclass: anytype,
+        comptime Return: type,
+        selector: anytype,
+        args: anytype,
+    ) Return {
+        const messaging = @import("../messaging/root.zig");
+        return messaging.sendSuperV1(Return, self, superclass, selector, args);
+    }
 
     /// Converts a raw nullable `raw.id` into an optional `Object`.
     pub inline fn fromRaw(val: raw.id) ?Object {

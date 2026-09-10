@@ -60,6 +60,17 @@ pub const Method = struct {
         return @intCast(raw.runtime.method_getNumberOfArguments(self.ptr));
     }
 
+    /// Directly invokes this method on `receiver` with tuple `args`.
+    pub inline fn invoke(
+        self: Method,
+        comptime Return: type,
+        receiver: anytype,
+        args: anytype,
+    ) Return {
+        const messaging = @import("../messaging/root.zig");
+        return messaging.invoke(self, Return, receiver, args);
+    }
+
     /// Writes the return type string into a caller-provided buffer without heap allocation.
     pub inline fn returnType(self: Method, buffer: []u8) void {
         raw.runtime.method_getReturnType(self.ptr, buffer.ptr, buffer.len);

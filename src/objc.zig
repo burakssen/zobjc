@@ -58,6 +58,13 @@ pub const OwnedPropertyAttributes = memory.OwnedPropertyAttributes;
 pub const OwnedCStringList = memory.OwnedCStringList;
 pub const AutoreleasePool = memory.AutoreleasePool;
 
+// Messaging subsystem
+pub const send = messaging.send;
+pub const sendSuper = messaging.sendSuper;
+pub const invoke = messaging.invoke;
+pub const callImp = messaging.callImp;
+pub const sendChecked = messaging.sendChecked;
+
 // Block subsystem
 pub const Block = block.Block;
 
