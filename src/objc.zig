@@ -72,6 +72,12 @@ pub const Block = block.Block;
 pub const Encoding = encoding.Encoding;
 pub const comptimeEncode = encoding.comptimeEncode;
 pub const methodEncoding = encoding.methodEncoding;
+pub const StorageType = encoding.StorageType;
+
+// Dynamic builder subsystem
+pub const ClassBuilder = builder.ClassBuilder;
+pub const ProtocolBuilder = builder.ProtocolBuilder;
+pub const PropertyOptions = builder.PropertyOptions;
 
 /// Free memory allocated by the Objective-C runtime C allocator.
 ///

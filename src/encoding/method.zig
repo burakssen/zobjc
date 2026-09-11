@@ -158,9 +158,6 @@ pub fn methodEncodingLength(comptime F: type) usize {
             @compileError("methodEncoding requires a function type, found: " ++ @typeName(F));
         }
         const fn_info = info.@"fn";
-        if (!fn_info.calling_convention.eql(std.builtin.CallingConvention.c)) {
-            @compileError("Objective-C method implementation function must use callconv(.c)");
-        }
         if (fn_info.params.len < 2) {
             @compileError("Objective-C method implementation must take at least 2 arguments (self, _cmd)");
         }
@@ -265,5 +262,11 @@ pub fn encodeMethod(
 
 /// Validates that callback type `F` is suitable for an Objective-C method implementation.
 pub fn validateMethodImplementation(comptime F: type) void {
+    const info = @typeInfo(F);
+    const cc_tag: std.builtin.CallingConvention.Tag = info.@"fn".calling_convention;
+    const c_tag: std.builtin.CallingConvention.Tag = std.builtin.CallingConvention.c;
+    if (cc_tag != c_tag) {
+        @compileError("Objective-C method implementation function must use callconv(.c)");
+    }
     comptime _ = methodEncoding(F);
 }

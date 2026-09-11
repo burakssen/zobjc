@@ -59,6 +59,7 @@ pub const PropertyEncoding = property.PropertyEncoding;
 // --- Type Traits & Validation ---
 pub const isObjCEncodable = zig_type.isObjCEncodable;
 pub const assertObjCEncodable = zig_type.assertObjCEncodable;
+pub const StorageType = zig_type.StorageType;
 
 // --- Legacy Compatibility Shim ---
 // Preserved for compatibility with upstream code querying Encoding.init(T).

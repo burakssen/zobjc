@@ -71,6 +71,12 @@ pub const Class = struct {
         return raw.boolResult(raw.runtime.class_isMetaClass(self.ptr));
     }
 
+    /// Returns the metaclass corresponding to this class.
+    pub inline fn metaClass(self: Class) Class {
+        const raw_meta = raw.runtime.object_getClass(@ptrCast(self.ptr));
+        return Class.fromRawNonNull(raw_meta.?);
+    }
+
     /// Returns the superclass of this class, or null if root class (e.g. NSObject).
     pub inline fn superclass(self: Class) ?Class {
         return Class.fromRaw(raw.runtime.class_getSuperclass(self.ptr));

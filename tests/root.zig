@@ -10,5 +10,6 @@ test {
     _ = @import("encoding/root.zig");
     _ = @import("abi/root.zig");
     _ = @import("block/root.zig");
+    _ = @import("builder/root.zig");
     _ = @import("integration/root.zig");
 }

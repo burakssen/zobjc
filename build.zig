@@ -81,6 +81,12 @@ pub fn build(b: *std.Build) !void {
     const test_messaging_step = b.step("test-messaging", "Run unified messaging subsystem tests");
     test_messaging_step.dependOn(&run_messaging_test.step);
 
+    // Step: test-builder (runs dynamic class and protocol builder tests)
+    const builder_test = addObjcTest(b, target, optimize, "test-builder", "tests/builder/root.zig", objc_c, add_paths, true);
+    const run_builder_test = b.addRunArtifact(builder_test);
+    const test_builder_step = b.step("test-builder", "Run dynamic class and protocol builder tests");
+    test_builder_step.dependOn(&run_builder_test.step);
+
     // Step: test-integration (runs Foundation/AppKit integration tests)
     const integration_test = addObjcTest(b, target, optimize, "test-integration", "tests/integration/root.zig", objc_c, add_paths, true);
     const run_integration_test = b.addRunArtifact(integration_test);
@@ -100,6 +106,7 @@ pub fn build(b: *std.Build) !void {
         "type_encodings",
         "abi_classification",
         "messaging",
+        "dynamic_class",
     };
 
     for (example_names) |name| {

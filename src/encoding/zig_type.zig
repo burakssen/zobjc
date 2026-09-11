@@ -10,6 +10,8 @@ const raw = @import("../raw/root.zig");
 const Object = @import("../runtime/object.zig").Object;
 const Class = @import("../runtime/class.zig").Class;
 const Selector = @import("../runtime/selector.zig").Selector;
+const Imp = @import("../runtime/imp.zig").Imp;
+const Protocol = @import("../runtime/protocol.zig").Protocol;
 
 /// Determines whether `T` is valid for Objective-C type encoding.
 pub fn isObjCEncodable(comptime T: type) bool {
@@ -144,4 +146,22 @@ pub fn getAggregateName(comptime T: type) []const u8 {
     const full_name = @typeName(T);
     var it = std.mem.splitBackwardsScalar(u8, full_name, '.');
     return it.first();
+}
+
+/// Resolves the physical C-ABI storage type for a given Zig type `T`.
+///
+/// High-level wrappers (`Object`, `Class`, `Selector`, `Imp`, `Protocol`) map to their
+/// respective raw pointer types, enums map to their underlying integer tag types, and
+/// primitives/structs map to themselves.
+pub fn StorageType(comptime T: type) type {
+    if (T == Object or T == ?Object) return raw.id;
+    if (T == Class or T == ?Class) return raw.Class;
+    if (T == Selector or T == ?Selector) return raw.SEL;
+    if (T == Imp or T == ?Imp) return raw.IMP;
+    if (T == Protocol or T == ?Protocol) return raw.Protocol;
+
+    return switch (@typeInfo(T)) {
+        .@"enum" => |e| e.tag_type,
+        else => T,
+    };
 }
