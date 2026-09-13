@@ -67,6 +67,9 @@ pub const sendChecked = messaging.sendChecked;
 
 // Block subsystem
 pub const Block = block.Block;
+pub const OwnedBlock = block.OwnedBlock;
+pub const OwnedImp = block.OwnedImp;
+pub const LegacyBlock = block.LegacyBlock;
 
 // Encoding subsystem
 pub const Encoding = encoding.Encoding;

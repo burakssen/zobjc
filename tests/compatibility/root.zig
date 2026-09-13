@@ -59,8 +59,8 @@ test "compatibility: Object.msgSendSuper" {
     defer instance.msgSend(void, "dealloc", .{});
 }
 
-test "compatibility: Block definition and invocation" {
-    const AddBlock = objc.Block(struct {
+test "compatibility: LegacyBlock definition and invocation" {
+    const AddBlock = objc.LegacyBlock(struct {
         x: i32,
         y: i32,
     }, .{}, i32);

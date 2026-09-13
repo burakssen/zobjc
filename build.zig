@@ -87,6 +87,12 @@ pub fn build(b: *std.Build) !void {
     const test_builder_step = b.step("test-builder", "Run dynamic class and protocol builder tests");
     test_builder_step.dependOn(&run_builder_test.step);
 
+    // Step: test-block (runs Apple Block subsystem tests)
+    const block_test = addObjcTest(b, target, optimize, "test-block", "tests/block/root.zig", objc_c, add_paths, true);
+    const run_block_test = b.addRunArtifact(block_test);
+    const test_block_step = b.step("test-block", "Run Objective-C Block subsystem tests");
+    test_block_step.dependOn(&run_block_test.step);
+
     // Step: test-integration (runs Foundation/AppKit integration tests)
     const integration_test = addObjcTest(b, target, optimize, "test-integration", "tests/integration/root.zig", objc_c, add_paths, true);
     const run_integration_test = b.addRunArtifact(integration_test);
@@ -175,6 +181,12 @@ fn addObjcTest(
         .flags = &.{},
     });
     mod.addIncludePath(b.path("tests/fixtures/abi"));
+
+    mod.addCSourceFile(.{
+        .file = b.path("tests/fixtures/blocks/fixtures.m"),
+        .flags = &.{"-fblocks"},
+    });
+    mod.addIncludePath(b.path("tests/fixtures/blocks"));
 
     const test_artifact = b.addTest(.{
         .name = name,

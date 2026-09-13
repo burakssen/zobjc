@@ -18,6 +18,7 @@ pub const encoder = @import("encoder.zig");
 pub const parser = @import("parser.zig");
 pub const method = @import("method.zig");
 pub const property = @import("property.zig");
+pub const block_sig = @import("block_signature.zig");
 
 // --- Semantic AST Types ---
 pub const Type = types.Type;
@@ -46,6 +47,8 @@ pub const encode = encoder.encode;
 pub const encodeMethod = method.encodeMethod;
 pub const methodEncoding = method.methodEncoding;
 pub const methodEncodingLength = method.methodEncodingLength;
+pub const blockSignature = block_sig.blockSignature;
+pub const blockSignatureLength = block_sig.blockSignatureLength;
 
 // --- Method Signature Representation ---
 pub const MethodSignature = method.MethodSignature;

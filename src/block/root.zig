@@ -1,184 +1,138 @@
-//! Objective-C Blocks implementation.
+//! Objective-C Blocks ABI and runtime subsystem.
 //!
-//! Provides the Block type constructor for stack-allocated and copied Objective-C blocks.
+//! Provides typed Block handles (`Block`, `OwnedBlock`), capture semantics (`Strong`,
+//! `Weak`, `BlockRef`), forwarding cells (`ByRef`), large descriptor synthesis,
+//! Phase 5 ABI-integrated `BLOCK_USE_STRET` derivation, and Block ↔ IMP bridging.
 
 const std = @import("std");
-const assert = std.debug.assert;
-const Allocator = std.mem.Allocator;
 const raw = @import("../raw/root.zig");
-const comptimeEncode = @import("../encoding/root.zig").comptimeEncode;
 
-// We have to use the raw C allocator for all heap allocation in here
-// because the objc runtime expects `malloc` to be used. If you don't use
-// malloc you'll get segfaults because the objc runtime will try to free
-// the memory with `free`.
-const alloc = std.heap.raw_c_allocator;
+// Subsystem modules
+pub const abi = @import("abi.zig");
+pub const flags = @import("flags.zig");
+pub const descriptor = @import("descriptor.zig");
+pub const signature = @import("signature.zig");
+pub const layout = @import("layout.zig");
+pub const capture_traits = @import("capture_traits.zig");
+pub const strong = @import("strong.zig");
+pub const weak = @import("weak.zig");
+pub const block_ref = @import("block_ref.zig");
+pub const byref = @import("byref.zig");
+pub const byref_cell = @import("byref_cell.zig");
+pub const capture = @import("capture.zig");
+pub const block = @import("block.zig");
+pub const owned = @import("owned.zig");
+pub const create = @import("create.zig");
+pub const invoke = @import("invoke.zig");
+pub const imp = @import("imp.zig");
+pub const diagnostics = @import("diagnostics.zig");
+pub const validation = @import("validation.zig");
+pub const internal = @import("internal/literal.zig");
 
-// TODO(phase-8): Replace legacy block capture handling and simplify Block ABI layout.
+// --- Primary Public Types ---
+pub const Block = block.Block;
+pub const OwnedBlock = owned.OwnedBlock;
+pub const Strong = strong.Strong;
+pub const Weak = weak.Weak;
+pub const BlockRef = block_ref.BlockRef;
+pub const ByRef = byref.ByRef;
+pub const ByRefCapture = byref.ByRefCapture;
+pub const ByRefCell = byref_cell.ByRefCell;
 
-/// Creates a new block type with captured (closed over) values.
-pub fn Block(
+// --- ABI & Descriptor Types ---
+pub const BlockFlags = flags.BlockFlags;
+pub const Descriptor = descriptor.Descriptor;
+pub const LayoutResult = layout.LayoutResult;
+pub const blockSignature = signature.blockSignature;
+pub const blockSignatureLength = signature.blockSignatureLength;
+
+// --- Capture System ---
+pub const CaptureTraits = capture_traits.CaptureTraits;
+pub const CaptureCategory = capture_traits.CaptureCategory;
+pub const CaptureStorage = capture.CaptureStorage;
+pub const CaptureInfo = capture.CaptureInfo;
+
+// --- Creation & Invocation ---
+pub const createBlock = create.createBlock;
+pub const fromFunction = create.fromFunction;
+pub const createNoCapture = create.fromFunction;
+pub const global = create.global;
+pub const callBlock = invoke.callBlock;
+
+// --- Block ↔ IMP Bridging ---
+pub const OwnedImp = imp.OwnedImp;
+pub const makeImp = imp.makeImp;
+pub const MethodBlock = imp.MethodBlock;
+
+// --- Legacy Compatibility Shim ---
+// Preserved for backward compatibility with pre-Phase 8 code specifying 3 arguments.
+pub fn LegacyBlock(
     comptime CapturesArg: type,
     comptime Args: anytype,
     comptime Return: type,
 ) type {
-    return struct {
-        const Self = @This();
-        const captures_info = @typeInfo(Captures).@"struct";
-        const InvokeFn = FnType(anyopaque);
-        const descriptor: raw.blocks.BlockDescriptor = .{
-            .reserved = 0,
-            .size = @sizeOf(Context),
-            .copy_helper = &descCopyHelper,
-            .dispose_helper = &descDisposeHelper,
-            .signature = &comptimeEncode(InvokeFn),
-        };
+    _ = Args;
+    const captures_info = @typeInfo(CapturesArg).@"struct";
+    const total_fields = captures_info.fields.len + 5;
+    var field_names: [total_fields][]const u8 = undefined;
+    var field_types: [total_fields]type = undefined;
+    var field_attrs: [total_fields]std.builtin.Type.StructField.Attributes = undefined;
 
-        /// This is the function type that is called back.
-        pub const Fn = FnType(Context);
+    field_names[0] = "isa";
+    field_types[0] = ?*anyopaque;
+    field_attrs[0] = .{ .@"align" = @alignOf(?*anyopaque) };
 
-        /// The captures type, so it can be easily referenced again.
-        pub const Captures = CapturesArg;
+    field_names[1] = "flags";
+    field_types[1] = c_int;
+    field_attrs[1] = .{ .@"align" = @alignOf(c_int) };
 
-        /// This is the block context sent as the first parameter to the function.
-        pub const Context = BlockContext(Captures, InvokeFn);
+    field_names[2] = "reserved";
+    field_types[2] = c_int;
+    field_attrs[2] = .{ .@"align" = @alignOf(c_int) };
 
-        /// Create a new block context. The block context is what is passed
-        /// (by reference) to functions that request a block.
-        pub fn init(captures: Captures, func: *const Fn) Context {
-            var ctx: Context = undefined;
-            ctx.isa = raw.blocks._NSConcreteStackBlock;
-            ctx.flags = .{
-                .copy_dispose = true,
-                .stret = @typeInfo(Return) == .@"struct",
-                .signature = true,
-            };
-            ctx.invoke = @ptrCast(func);
-            ctx.descriptor = &descriptor;
-            inline for (captures_info.fields) |field| {
-                @field(ctx, field.name) = @field(captures, field.name);
-            }
+    field_names[3] = "invoke";
+    field_types[3] = ?*const anyopaque;
+    field_attrs[3] = .{ .@"align" = @alignOf(?*const anyopaque) };
 
-            return ctx;
-        }
+    field_names[4] = "descriptor";
+    field_types[4] = ?*const anyopaque;
+    field_attrs[4] = .{ .@"align" = @alignOf(?*const anyopaque) };
 
-        /// Invoke the block with the given arguments.
-        pub fn invoke(ctx: *const Context, args: anytype) Return {
-            return @call(
-                .auto,
-                ctx.invoke,
-                .{ctx} ++ args,
-            );
-        }
-
-        /// Copies the given context by either literally copying it
-        /// to the heap or increasing the reference count. This must be
-        /// paired with a `release` call to release the block.
-        pub fn copy(ctx: *const Context) Allocator.Error!*Context {
-            const copied = raw.blocks._Block_copy(@ptrCast(@alignCast(ctx))) orelse
-                return error.OutOfMemory;
-            return @ptrCast(@alignCast(copied));
-        }
-
-        /// Release a copied block context. This must only be called on
-        /// contexts returned by the `copy` function.
-        pub fn release(ctx: *const Context) void {
-            assert(@intFromPtr(ctx.isa) == @intFromPtr(raw.blocks._NSConcreteMallocBlock));
-            raw.blocks._Block_release(@ptrCast(@alignCast(ctx)));
-        }
-
-        fn descCopyHelper(dst: *anyopaque, src: *anyopaque) callconv(.c) void {
-            const real_dst: *Context = @ptrCast(@alignCast(dst));
-            const real_src: *Context = @ptrCast(@alignCast(src));
-            inline for (captures_info.fields) |field| {
-                if (field.type == raw.id) {
-                    raw.blocks._Block_object_assign(
-                        @ptrCast(&@field(real_dst, field.name)),
-                        @ptrCast(@field(real_src, field.name)),
-                        .object,
-                    );
-                }
-            }
-        }
-
-        fn descDisposeHelper(src: *anyopaque) callconv(.c) void {
-            const real_src: *Context = @ptrCast(@alignCast(src));
-            inline for (captures_info.fields) |field| {
-                if (field.type == raw.id) {
-                    raw.blocks._Block_object_dispose(
-                        @ptrCast(@field(real_src, field.name)),
-                        .object,
-                    );
-                }
-            }
-        }
-
-        fn FnType(comptime ContextArg: type) type {
-            var param_types: [Args.len + 1]type = undefined;
-            param_types[0] = *const ContextArg;
-            for (Args, 1..) |Arg, i| param_types[i] = Arg;
-
-            return @Fn(&param_types, &@splat(.{}), Return, .{ .@"callconv" = .c });
-        }
-    };
-}
-
-fn BlockContext(comptime Captures: type, comptime InvokeFn: type) type {
-    const captures_info = @typeInfo(Captures).@"struct";
-    var fields: [captures_info.fields.len + 5]std.builtin.Type.StructField = undefined;
-    fields[0] = .{
-        .name = "isa",
-        .type = ?*anyopaque,
-        .default_value_ptr = null,
-        .is_comptime = false,
-        .alignment = @alignOf(*anyopaque),
-    };
-    fields[1] = .{
-        .name = "flags",
-        .type = raw.blocks.BlockFlags,
-        .default_value_ptr = null,
-        .is_comptime = false,
-        .alignment = @alignOf(c_int),
-    };
-    fields[2] = .{
-        .name = "reserved",
-        .type = c_int,
-        .default_value_ptr = null,
-        .is_comptime = false,
-        .alignment = @alignOf(c_int),
-    };
-    fields[3] = .{
-        .name = "invoke",
-        .type = *const InvokeFn,
-        .default_value_ptr = null,
-        .is_comptime = false,
-        .alignment = @typeInfo(*const InvokeFn).pointer.alignment,
-    };
-    fields[4] = .{
-        .name = "descriptor",
-        .type = *const raw.blocks.BlockDescriptor,
-        .default_value_ptr = null,
-        .is_comptime = false,
-        .alignment = @alignOf(*raw.blocks.BlockDescriptor),
-    };
-
-    for (captures_info.fields, 5..) |capture, i| {
-        switch (capture.type) {
-            comptime_int => @compileError("capture should not be a comptime_int, try using @as"),
-            comptime_float => @compileError("capture should not be a comptime_float, try using @as"),
-            else => {},
-        }
-        fields[i] = .{ .name = capture.name, .type = capture.type, .default_value_ptr = null, .is_comptime = false, .alignment = capture.alignment };
-    }
-
-    var field_names: [fields.len][]const u8 = undefined;
-    var field_types: [fields.len]type = undefined;
-    var field_attrs: [fields.len]std.builtin.Type.StructField.Attributes = undefined;
-    for (fields, 0..) |field, i| {
+    for (captures_info.fields, 5..) |field, i| {
         field_names[i] = field.name;
         field_types[i] = field.type;
         field_attrs[i] = .{ .@"align" = field.alignment };
     }
 
-    return @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
+    const CtxType = @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
+
+    return struct {
+        const Self = @This();
+        pub const Captures = CapturesArg;
+        pub const Context = CtxType;
+
+        pub fn init(captures: Captures, func: anytype) Context {
+            const fn_ptr = if (@typeInfo(@TypeOf(func)) == .@"fn") &func else func;
+            var ctx: Context = undefined;
+            ctx.isa = raw.blocks._NSConcreteStackBlock;
+            ctx.flags = 0;
+            ctx.reserved = 0;
+            ctx.invoke = @ptrCast(fn_ptr);
+            ctx.descriptor = null;
+            inline for (captures_info.fields) |f| {
+                @field(ctx, f.name) = @field(captures, f.name);
+            }
+            return ctx;
+        }
+
+        pub fn invoke(ctx: *const Context, args: anytype) Return {
+            _ = args;
+            const func: *const fn (*const Context) callconv(.c) Return = @ptrCast(@alignCast(ctx.invoke.?));
+            return func(ctx);
+        }
+    };
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }
