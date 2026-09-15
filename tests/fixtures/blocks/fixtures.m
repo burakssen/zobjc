@@ -18,6 +18,24 @@ static int g_dealloc_count = 0;
 }
 @end
 
+@implementation CopyableTracker
+- (instancetype)initWithIdentifier:(int)ident {
+    self = [super init];
+    if (self) {
+        _identifier = ident;
+        _copyCount = 0;
+    }
+    return self;
+}
+
+- (id)copyWithZone:(NSZone *)zone {
+    CopyableTracker *c = [[[self class] allocWithZone:zone] initWithIdentifier:self.identifier];
+    c.copyCount = self.copyCount + 1;
+    return c;
+}
+@end
+
+
 int get_dealloc_count(void) {
     return g_dealloc_count;
 }

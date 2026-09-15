@@ -16,6 +16,11 @@ test {
     _ = @import("object_test.zig");
     _ = @import("lookup_test.zig");
     _ = @import("mutation_test.zig");
+    _ = @import("association_test.zig");
+    _ = @import("image_test.zig");
+    _ = @import("enumeration_test.zig");
+    _ = @import("swizzle_test.zig");
+    _ = @import("advanced_test.zig");
 }
 
 test "runtime: class lookup and metaclass lookup" {

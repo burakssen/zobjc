@@ -13,6 +13,7 @@ pub const encoding = @import("encoding/root.zig");
 pub const memory = @import("memory/root.zig");
 pub const block = @import("block/root.zig");
 pub const builder = @import("builder/root.zig");
+pub const advanced = @import("advanced/root.zig");
 
 // Low-level C bridge (preserved for backward compatibility)
 pub const c = raw.c;
@@ -82,6 +83,14 @@ pub const ClassBuilder = builder.ClassBuilder;
 pub const ProtocolBuilder = builder.ProtocolBuilder;
 pub const PropertyOptions = builder.PropertyOptions;
 
+// Advanced runtime facilities (associations, swizzling, replacement)
+pub const AssociationKey = runtime.AssociationKey;
+pub const AssociationPolicy = runtime.AssociationPolicy;
+pub const Swizzle = runtime.Swizzle;
+pub const ScopedSwizzle = runtime.ScopedSwizzle;
+pub const MethodReplacement = runtime.MethodReplacement;
+pub const BlockMethodReplacement = runtime.BlockMethodReplacement;
+
 /// Free memory allocated by the Objective-C runtime C allocator.
 ///
 /// NOTE: In Phase 3, preferred usage is the owned wrappers:
@@ -114,5 +123,6 @@ test "independent module compilation" {
     _ = @import("runtime/root.zig");
     _ = @import("block/root.zig");
     _ = @import("builder/root.zig");
+    _ = @import("advanced/root.zig");
     _ = @import("internal/root.zig");
 }

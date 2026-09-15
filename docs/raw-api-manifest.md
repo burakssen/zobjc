@@ -259,3 +259,28 @@ Audit Status: **146 / 146 SDK declarations covered (100.0%)**.
 | `BlockDescriptor` | ABI Layout | Block descriptor layout (size, helpers, signature) |
 | `BlockFlags` | Bitfield | Block bitfield flags |
 | `BlockFieldFlags` | Enum | Capture flags (`object`, `block`, `byref`, `weak`, `byref_caller`) |
+
+---
+
+## 8. High-Level Classification & Safety Tiering
+
+Every raw symbol belongs to one of four clearly separated tiers:
+
+| Raw Symbol | Exposure Tier | Canonical High-Level Path | Rationale / Safety Model |
+| :--- | :--- | :--- | :--- |
+| `objc_setAssociatedObject` | Safe Runtime | `objc.Object.setAssociated` / `objc.runtime.setAssociated` | Type-safe `AssociationPolicy` and `AssociationKey` |
+| `objc_getAssociatedObject` | Safe Runtime | `objc.Object.associated` / `associatedRetained` | Returns `?Object` or `?Retained(Object)` |
+| `objc_removeAssociatedObjects` | Advanced Memory | `objc.advanced.removeAllAssociatedObjects` | Bulk removal across all keys; discourages routine use |
+| `objc_copyImageNames` | Safe Runtime | `objc.runtime.images` | Returns memory-managed `OwnedCStringList` |
+| `objc_copyClassNamesForImage` | Safe Runtime | `objc.runtime.classNamesForImage` | Returns `OwnedCStringList` (empty on unknown image) |
+| `class_getImageName` | Safe Runtime | `objc.Class.imageName` | Returns `?[:0]const u8` |
+| `objc_enumerateClasses` | Safe Runtime | `objc.runtime.enumerateClasses` | Modern filtered class iterator with early stop |
+| `method_exchangeImplementations` | Safe Runtime | `objc.Swizzle` / `objc.ScopedSwizzle` | Reversible method swapping with optional signature check |
+| `class_replaceMethod` | Safe Runtime | `objc.MethodReplacement` / `BlockMethodReplacement` | Tracks state, prevents blind overwrite on conflict |
+| `objc_constructInstance` | Advanced Memory | `objc.advanced.constructInstance` / `ConstructedInstance` | Requires zero-filled, aligned manual storage |
+| `objc_destructInstance` | Advanced Memory | `objc.advanced.destructInstance` / `ConstructedInstance.destruct` | Destructs instance without freeing backing storage |
+| `object_copy` | Advanced Memory | `objc.advanced.copyObjectMemory` | Raw bitwise copy with extra bytes; bypasses `-copy` |
+| `object_dispose` | Advanced Memory | `objc.advanced.disposeObjectMemory` | Directly frees runtime memory; bypasses `-dealloc` |
+| `objc_duplicateClass` | Raw-Only | `objc.raw.runtime.objc_duplicateClass` | Documented Apple bugs; prefer `ClassBuilder` |
+| `objc_setForwardHandler` | Quarantined SPI | `objc.raw.internal.getSetForwardHandler` | Unstable private SPI; resolved dynamically via `dlsym` |
+

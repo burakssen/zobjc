@@ -82,6 +82,23 @@ pub const Class = struct {
         return Class.fromRaw(raw.runtime.class_getSuperclass(self.ptr));
     }
 
+    /// Returns true if this class equals target or is a subclass of target in the class hierarchy.
+    ///
+    /// Implemented via pure libobjc superclass traversal (zero Foundation messaging).
+    pub fn isSubclassOf(self: Class, target: Class) bool {
+        var current: ?Class = self;
+        while (current) |cls| {
+            if (cls.eql(target)) return true;
+            current = cls.superclass();
+        }
+        return false;
+    }
+
+    /// Returns true if this class is a strict subclass of target (excludes self == target).
+    pub inline fn isStrictSubclassOf(self: Class, target: Class) bool {
+        return !self.eql(target) and self.isSubclassOf(target);
+    }
+
     /// Returns the version number of this class definition.
     pub inline fn version(self: Class) i32 {
         return raw.runtime.class_getVersion(self.ptr);

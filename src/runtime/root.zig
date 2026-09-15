@@ -51,5 +51,33 @@ pub const registerClassPair = lookup.registerClassPair;
 pub const disposeClassPair = lookup.disposeClassPair;
 pub const classes = lookup.classes;
 pub const protocols = lookup.protocols;
-pub const imageNames = lookup.imageNames;
-pub const classNamesForImage = lookup.classNamesForImage;
+pub const imageNames = image.images;
+pub const images = image.images;
+pub const classNamesForImage = image.classNamesForImage;
+
+// Subsystems
+pub const association = @import("association.zig");
+pub const image = @import("image.zig");
+pub const enumeration = @import("enumeration.zig");
+pub const swizzle = @import("swizzle.zig");
+pub const replacement = @import("replacement.zig");
+
+// Associations
+pub const AssociationPolicy = association.AssociationPolicy;
+pub const AssociationKey = association.AssociationKey;
+pub const setAssociated = association.setAssociated;
+pub const associated = association.associated;
+pub const clearAssociated = association.clearAssociated;
+pub const associatedRetained = association.associatedRetained;
+
+// Enumeration
+pub const ImageFilter = enumeration.ImageFilter;
+pub const ClassEnumerationOptions = enumeration.ClassEnumerationOptions;
+pub const enumerateClasses = enumeration.enumerateClasses;
+pub const hasClassEnumeration = enumeration.hasClassEnumeration;
+
+// Swizzling & Replacement
+pub const Swizzle = swizzle.Swizzle;
+pub const ScopedSwizzle = swizzle.ScopedSwizzle;
+pub const MethodReplacement = replacement.MethodReplacement;
+pub const BlockMethodReplacement = replacement.BlockMethodReplacement;

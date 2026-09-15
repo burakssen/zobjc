@@ -10,6 +10,11 @@ const Selector = @import("selector.zig").Selector;
 const sel_fn = @import("selector.zig").sel;
 const Ivar = @import("ivar.zig").Ivar;
 const Iterator = @import("iterator.zig").Iterator;
+const memory = @import("../memory/root.zig");
+const association = @import("association.zig");
+const AssociationKey = association.AssociationKey;
+const AssociationPolicy = association.AssociationPolicy;
+
 /// A non-owning, non-null handle to an Objective-C object instance (`id`).
 pub const Object = struct {
     ptr: *raw.objc_object,
@@ -192,14 +197,57 @@ pub const Object = struct {
         return self.msgSend(T, getter, .{});
     }
 
-    /// Creates a copy of an object.
-    pub fn copy(self: Object, extra_bytes: usize) ?Object {
+    /// Sets an associated value for this object using a given key and association policy.
+    pub inline fn setAssociated(
+        self: Object,
+        key: *const AssociationKey,
+        value: ?Object,
+        policy: AssociationPolicy,
+    ) void {
+        association.setAssociated(self, key, value, policy);
+    }
+
+    /// Returns the value associated with this object for a given key as a non-owning handle.
+    pub inline fn associated(
+        self: Object,
+        key: *const AssociationKey,
+    ) ?Object {
+        return association.associated(self, key);
+    }
+
+    /// Clears the associated value for this object and key.
+    pub inline fn clearAssociated(
+        self: Object,
+        key: *const AssociationKey,
+    ) void {
+        association.clearAssociated(self, key);
+    }
+
+    /// Returns the value associated with this object for a given key, retained into an owning `Retained(Object)`.
+    pub inline fn associatedRetained(
+        self: Object,
+        key: *const AssociationKey,
+    ) ?memory.Retained(Object) {
+        return association.associatedRetained(self, key);
+    }
+
+    /// Copies object memory with extra bytes.
+    ///
+    /// ADVANCED: Preferred high-level entry point is `objc.advanced.copyObjectMemory`.
+    pub inline fn copyObjectMemory(self: Object, extra_bytes: usize) ?Object {
         return Object.fromRaw(raw.runtime.object_copy(self.ptr, extra_bytes));
     }
 
-    /// Frees the memory occupied by an object.
-    pub fn dispose(self: Object) void {
+    /// Disposes object memory directly via runtime without dealloc message dispatch.
+    ///
+    /// ADVANCED: Preferred high-level entry point is `objc.advanced.disposeObjectMemory`.
+    pub inline fn disposeObjectMemory(self: Object) void {
         _ = raw.runtime.object_dispose(self.ptr);
+    }
+
+    /// Deprecated alias for `disposeObjectMemory()`.
+    pub inline fn dispose(self: Object) void {
+        self.disposeObjectMemory();
     }
 
     /// Reads an instance variable value by name.

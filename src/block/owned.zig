@@ -31,6 +31,11 @@ pub fn OwnedBlock(comptime Signature: type) type {
             return p;
         }
 
+        /// Borrows the underlying raw Block pointer without relinquishing ownership.
+        pub fn toRaw(self: Self) *raw.blocks.Block_layout {
+            return self.ptr orelse @panic("attempted to use deinitialized OwnedBlock");
+        }
+
         /// Borrows a typed non-owning reference to this Block.
         pub fn borrow(self: Self) Borrowed {
             const p = self.ptr orelse @panic("attempted to borrow deinitialized OwnedBlock");

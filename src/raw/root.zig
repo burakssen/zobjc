@@ -11,6 +11,7 @@ pub const blocks = @import("blocks.zig");
 pub const compiler_runtime = @import("compiler_runtime.zig");
 pub const availability = @import("availability.zig");
 pub const deprecated = @import("deprecated.zig");
+pub const internal = @import("internal.zig");
 
 // --- Fundamental Types ---
 

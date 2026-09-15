@@ -11,6 +11,12 @@
 - (instancetype)initWithIdentifier:(int)ident;
 @end
 
+@interface CopyableTracker : NSObject <NSCopying>
+@property (nonatomic, assign) int identifier;
+@property (nonatomic, assign) int copyCount;
+- (instancetype)initWithIdentifier:(int)ident;
+@end
+
 int get_dealloc_count(void);
 void reset_dealloc_count(void);
 

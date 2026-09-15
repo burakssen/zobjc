@@ -76,14 +76,12 @@ test "OwnedCStringList: runtime.imageNames and classNamesForImage" {
     }
 
     if (libobjc_image) |target_image| {
-        if (objc.runtime.classNamesForImage(target_image)) |*names| {
-            var class_names = names.*;
-            defer class_names.deinit();
+        var class_names = objc.runtime.classNamesForImage(target_image);
+        defer class_names.deinit();
 
-            try testing.expect(class_names.count() > 0);
-            const first_cls_name = class_names.get(0).?;
-            try testing.expect(first_cls_name.len > 0);
-        }
+        try testing.expect(class_names.count() > 0);
+        const first_cls_name = class_names.get(0).?;
+        try testing.expect(first_cls_name.len > 0);
     }
 }
 

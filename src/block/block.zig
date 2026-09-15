@@ -35,7 +35,7 @@ pub fn Block(comptime Signature: type) type {
 
         /// Views this Block as an Objective-C object.
         pub fn asObject(self: Self) Object {
-            return Object.fromRaw(@ptrCast(self.ptr));
+            return Object.fromRawNonNull(@ptrCast(self.ptr));
         }
 
         /// Calls the Block with typed arguments.

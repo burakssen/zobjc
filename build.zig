@@ -113,6 +113,7 @@ pub fn build(b: *std.Build) !void {
         "abi_classification",
         "messaging",
         "dynamic_class",
+        "runtime_inspector",
     };
 
     for (example_names) |name| {
