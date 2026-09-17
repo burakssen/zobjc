@@ -86,14 +86,14 @@ test "compatibility: AutoreleasePool" {
 }
 
 test "compatibility: Property and copyPropertyList" {
-    const NSObject = objc.getClass("NSObject").?;
-    const list = NSObject.copyPropertyList();
+    const Tracker = objc.getClass("DeallocTracker").?;
+    const list = Tracker.copyPropertyList();
     defer objc.free(list);
     try testing.expect(list.len > 0);
 
-    const prop = NSObject.getProperty("className");
+    const prop = Tracker.getProperty("identifier");
     try testing.expect(prop != null);
-    try testing.expectEqualStrings("className", prop.?.getName());
+    try testing.expectEqualStrings("identifier", prop.?.getName());
 }
 
 test "compatibility: Protocol and getProtocol" {
@@ -113,4 +113,8 @@ test "compatibility: Encoding and comptimeEncode" {
 test "compatibility: free function" {
     const slice = try std.heap.c_allocator.alloc(u8, 16);
     objc.free(slice);
+}
+
+test {
+    _ = @import("upstream_examples.zig");
 }

@@ -7,4 +7,5 @@ test {
     _ = @import("owned_runtime_list_test.zig");
     _ = @import("owned_descriptors_test.zig");
     _ = @import("autorelease_pool_test.zig");
+    _ = @import("lifetime_test.zig");
 }

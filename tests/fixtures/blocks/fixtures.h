@@ -1,9 +1,16 @@
 #ifndef ZOBJC_BLOCK_FIXTURES_H
 #define ZOBJC_BLOCK_FIXTURES_H
 
-#import <Foundation/Foundation.h>
+#import <objc/NSObject.h>
+#import <objc/runtime.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+typedef struct _NSZone NSZone;
+
+@protocol NSCopying
+- (id)copyWithZone:(NSZone *)zone;
+@end
 
 // --- Tracking Class for Lifetime Verification ---
 @interface DeallocTracker : NSObject

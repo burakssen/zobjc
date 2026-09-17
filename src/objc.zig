@@ -1,6 +1,6 @@
 //! Canonical public entry point for zobjc.
 //!
-//! Provides Zig bindings and architectural abstractions for the Apple Objective-C runtime.
+//! Provides type-safe Zig bindings and runtime abstractions for Apple's Objective-C runtime.
 
 const std = @import("std");
 
@@ -18,17 +18,16 @@ pub const advanced = @import("advanced/root.zig");
 // Low-level C bridge (preserved for backward compatibility)
 pub const c = raw.c;
 
-// Runtime handles
+// Core runtime handles
 pub const Object = runtime.Object;
 pub const Class = runtime.Class;
 pub const Selector = runtime.Selector;
-pub const Sel = runtime.Sel;
-pub const Property = runtime.Property;
-pub const Protocol = runtime.Protocol;
+pub const Sel = runtime.Sel; // Backward compatibility alias
 pub const Method = runtime.Method;
 pub const Ivar = runtime.Ivar;
+pub const Property = runtime.Property;
+pub const Protocol = runtime.Protocol;
 pub const Imp = runtime.Imp;
-pub const Iterator = runtime.Iterator;
 
 // Descriptors
 pub const MethodDescription = runtime.MethodDescription;
@@ -36,12 +35,13 @@ pub const PropertyAttribute = runtime.PropertyAttribute;
 pub const ProtocolMethodOptions = runtime.ProtocolMethodOptions;
 pub const ProtocolPropertyOptions = runtime.ProtocolPropertyOptions;
 
-// Runtime lookup & manipulation functions
+// Global runtime lookups
 pub const getClass = runtime.getClass;
 pub const lookupClass = runtime.lookupClass;
 pub const requireClass = runtime.requireClass;
 pub const getMetaClass = runtime.getMetaClass;
 pub const getProtocol = runtime.getProtocol;
+pub const requireProtocol = runtime.requireProtocol;
 pub const allocateClassPair = runtime.allocateClassPair;
 pub const registerClassPair = runtime.registerClassPair;
 pub const disposeClassPair = runtime.disposeClassPair;
@@ -49,41 +49,34 @@ pub const classes = runtime.classes;
 pub const protocols = runtime.protocols;
 pub const sel = runtime.sel;
 
-// Memory subsystem
-pub const Retained = memory.Retained;
-pub const Weak = memory.Weak;
-pub const OwnedCString = memory.OwnedCString;
-pub const OwnedRuntimeList = memory.OwnedRuntimeList;
-pub const OwnedMethodDescriptions = memory.OwnedMethodDescriptions;
-pub const OwnedPropertyAttributes = memory.OwnedPropertyAttributes;
-pub const OwnedCStringList = memory.OwnedCStringList;
-pub const AutoreleasePool = memory.AutoreleasePool;
-
-// Messaging subsystem
+// Messaging engine
 pub const send = messaging.send;
 pub const sendSuper = messaging.sendSuper;
 pub const invoke = messaging.invoke;
 pub const callImp = messaging.callImp;
-pub const sendChecked = messaging.sendChecked;
 
-// Block subsystem
+// Memory and ownership
+pub const Retained = memory.Retained;
+pub const Weak = memory.Weak;
+pub const AutoreleasePool = memory.AutoreleasePool;
+
+// Objective-C Blocks
 pub const Block = block.Block;
 pub const OwnedBlock = block.OwnedBlock;
-pub const OwnedImp = block.OwnedImp;
-pub const LegacyBlock = block.LegacyBlock;
+pub const LegacyBlock = block.LegacyBlock; // Backward compatibility alias
 
-// Encoding subsystem
+// Type Encoding
 pub const Encoding = encoding.Encoding;
 pub const comptimeEncode = encoding.comptimeEncode;
 pub const methodEncoding = encoding.methodEncoding;
 pub const StorageType = encoding.StorageType;
 
-// Dynamic builder subsystem
+// Dynamic class and protocol builders
 pub const ClassBuilder = builder.ClassBuilder;
 pub const ProtocolBuilder = builder.ProtocolBuilder;
 pub const PropertyOptions = builder.PropertyOptions;
 
-// Advanced runtime facilities (associations, swizzling, replacement)
+// Associated objects & Swizzling
 pub const AssociationKey = runtime.AssociationKey;
 pub const AssociationPolicy = runtime.AssociationPolicy;
 pub const Swizzle = runtime.Swizzle;
@@ -93,8 +86,9 @@ pub const BlockMethodReplacement = runtime.BlockMethodReplacement;
 
 /// Free memory allocated by the Objective-C runtime C allocator.
 ///
-/// NOTE: In Phase 3, preferred usage is the owned wrappers:
-/// `OwnedCString`, `OwnedRuntimeList(T)`, `OwnedMethodDescriptions`, etc.
+/// DEPRECATED: Non-owning handles should not manually invoke free().
+/// Prefer RAII owned container wrappers (`cls.methods()`, `cls.properties()`,
+/// `cls.ivars()`, `objc.runtime.classes()`, etc.) or call `objc.raw.runtime.free(ptr)`.
 pub inline fn free(ptr: anytype) void {
     const T = @TypeOf(ptr);
     if (@typeInfo(T) == .pointer and @typeInfo(T).pointer.size == .slice) {

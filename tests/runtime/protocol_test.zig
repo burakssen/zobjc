@@ -33,3 +33,8 @@ test "protocol: NSObject protocol introspection" {
     });
     try testing.expectEqual(@as(?objc.MethodDescription, null), non_existent);
 }
+
+test "protocol: requireProtocol succeeds on valid protocol" {
+    const proto = objc.requireProtocol("NSObject");
+    try testing.expect(std.mem.eql(u8, "NSObject", proto.name()));
+}

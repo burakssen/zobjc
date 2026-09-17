@@ -43,32 +43,33 @@ test "runtime: selector registration and inspection" {
 }
 
 test "runtime: property introspection" {
-    const NSObject = objc.getClass("NSObject").?;
-    const prop = NSObject.getProperty("className");
+    const Tracker = objc.getClass("DeallocTracker").?;
+    const prop = Tracker.getProperty("identifier");
     try testing.expect(prop != null);
-    try testing.expectEqualStrings("className", prop.?.getName());
+    try testing.expectEqualStrings("identifier", prop.?.getName());
 
-    const missing_prop = NSObject.getProperty("nonExistentPropertyXYZ");
+    const missing_prop = Tracker.getProperty("nonExistentPropertyXYZ");
     try testing.expect(missing_prop == null);
 
-    const prop_list = NSObject.copyPropertyList();
+    const prop_list = Tracker.copyPropertyList();
     defer objc.free(prop_list);
     try testing.expect(prop_list.len > 0);
 }
 
 test "runtime: protocol lookup and conformance" {
-    // Touch NSFileManager so the runtime loads its delegate protocol
-    _ = objc.getClass("NSFileManager");
-
     const obj_proto = objc.getProtocol("NSObject") orelse return error.ProtocolNotFound;
     try testing.expectEqualStrings("NSObject", obj_proto.getName());
 
-    const fm_proto = objc.getProtocol("NSFileManagerDelegate") orelse return error.ProtocolNotFound;
-    try testing.expectEqualStrings("NSFileManagerDelegate", fm_proto.getName());
-    try testing.expect(fm_proto.conformsToProtocol(obj_proto));
+    // Dynamically construct protocols to verify conformance in pure libobjc
+    var parent_builder = try objc.ProtocolBuilder.init("RuntimeTestParentProto");
+    const parent_proto = parent_builder.register();
 
-    const url_proto = objc.getProtocol("NSURLSessionDelegate") orelse return error.ProtocolNotFound;
-    try testing.expect(!fm_proto.conformsToProtocol(url_proto));
+    var child_builder = try objc.ProtocolBuilder.init("RuntimeTestChildProto");
+    try child_builder.inherit(parent_proto);
+    const child_proto = child_builder.register();
+
+    try testing.expect(child_proto.conformsToProtocol(parent_proto));
+    try testing.expect(!parent_proto.conformsToProtocol(child_proto));
 }
 
 test "runtime: subclass creation, method replacement, and ivar addition" {
@@ -111,15 +112,13 @@ test "runtime: subclass creation, method replacement, and ivar addition" {
     const mul_val = instance.msgSend(i32, "multiplyByTwo:", .{@as(i32, 21)});
     try testing.expectEqual(@as(i32, 42), mul_val);
 
-    // Test ivar access
-    const NSString = objc.getClass("NSString").?;
-    const str = NSString.msgSend(objc.Object, "stringWithUTF8String:", .{"ivar_test_val"});
-    defer str.msgSend(void, "dealloc", .{});
+    // Test ivar access with an NSObject
+    const val_obj = NSObject.msgSend(objc.Object, "new", .{});
+    defer val_obj.release();
 
-    instance.setInstanceVariable("custom_ivar", str);
+    instance.setInstanceVariable("custom_ivar", val_obj);
     const read_ivar = instance.getInstanceVariable("custom_ivar").?;
-    const utf8 = read_ivar.getProperty([*c]const u8, "UTF8String");
-    try testing.expectEqualStrings("ivar_test_val", std.mem.span(utf8));
+    try testing.expect(read_ivar.eql(val_obj));
 }
 
 test "runtime: object retain and release" {

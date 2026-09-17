@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const objc = @import("objc");
+const foundation = @import("objc_foundation");
 const testing = std.testing;
 
 test "integration: NSArray iteration" {
@@ -22,8 +23,8 @@ test "integration: NSArray iteration" {
     }
 
     var sum: c_int = 0;
-    var iter = array.iterate();
-    while (iter.next()) |elem| {
+    var iter = foundation.fastIterate(array);
+    while (try iter.next()) |elem| {
         sum += elem.getProperty(c_int, "intValue");
     }
     try testing.expectEqual(@as(c_int, 0 + 1 + 2 + 3 + 4), sum);
@@ -50,8 +51,8 @@ test "integration: NSDictionary iteration" {
     }
 
     var sum: c_int = 0;
-    var iter = dict.iterate();
-    while (iter.next()) |key| {
+    var iter = foundation.fastIterate(dict);
+    while (try iter.next()) |key| {
         const val = dict.msgSend(objc.Object, "valueForKey:", .{key});
         sum += val.getProperty(c_int, "intValue");
     }

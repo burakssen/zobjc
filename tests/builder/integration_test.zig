@@ -82,8 +82,8 @@ test "Integration: dynamic class with object ivar conforming to dynamic protocol
     try testing.expect(box.send(?objc.Object, "value", .{}) == null);
 
     // Create a payload object to store in the box
-    const NSString = objc.requireClass("NSString");
-    const payload = NSString.send(objc.Object, "stringWithUTF8String:", .{"Hello from dynamic Box!"});
+    const payload = NSObject.send(objc.Object, "new", .{});
+    defer payload.release();
 
     // Store in box
     box.send(void, "setValue:", .{payload});
@@ -91,9 +91,6 @@ test "Integration: dynamic class with object ivar conforming to dynamic protocol
     // Read back from box
     const retrieved = box.send(?objc.Object, "value", .{}).?;
     try testing.expect(retrieved.eql(payload));
-
-    const utf8 = retrieved.send([*:0]const u8, "UTF8String", .{});
-    try testing.expectEqualStrings("Hello from dynamic Box!", std.mem.span(utf8));
 }
 
 test "Integration: dynamic class with scalar ivar and arithmetic methods" {

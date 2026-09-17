@@ -11,16 +11,19 @@ The architecture is strictly organized into decoupled subsystems where each laye
 
 ```mermaid
 flowchart TD
-    objc["objc.zig (Root Facade)"]
+    foundation["objc_foundation (Optional Foundation Layer)"]
+    objc["objc.zig (Root Facade - Pure libobjc)"]
     runtime["runtime/"]
     messaging["messaging/"]
     block["block/"]
     memory["memory/"]
     encoding["encoding/"]
-    abi["abi/ (Phase 5)"]
-    builder["builder/ (Phase 7)"]
+    abi["abi/"]
+    builder["builder/"]
     raw["raw/"]
     internal["internal/"]
+
+    foundation --> objc
 
     objc --> runtime
     objc --> messaging
@@ -35,7 +38,7 @@ flowchart TD
 
     messaging --> raw
     messaging --> internal
-    messaging -.-> abi
+    messaging --> abi
 
     block --> raw
     block --> encoding

@@ -96,11 +96,34 @@ def main():
         if "deprecated.zig" in rel_file:
             deprecated_zig_decls.update(decls)
 
+    # Load and verify manifest
+    manifest_path = os.path.join(os.path.dirname(__file__), "runtime-api-manifest.json")
+    manifest_symbols = set()
+    manifest_by_symbol = {}
+    if os.path.isfile(manifest_path):
+        import json
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest_data = json.load(f)
+        for entry in manifest_data:
+            sym = entry["symbol"]
+            manifest_symbols.add(sym)
+            manifest_by_symbol[sym] = entry
+
+    # Check for unclassified SDK symbols
+    unclassified = total_sdk_exports - manifest_symbols
+    if unclassified:
+        print("UNCLASSIFIED SDK SYMBOLS (Not in tools/runtime-api-manifest.json):")
+        for sym in sorted(unclassified):
+            print(f"  - {sym}")
+        print()
+        sys.exit(1)
+
     # Calculate coverage
     covered = total_sdk_exports.intersection(all_zig_decls)
     missing = total_sdk_exports - all_zig_decls
     deprecated = total_sdk_exports.intersection(deprecated_zig_decls)
     active_covered = covered - deprecated
+    compiler_rt = {s for s in covered if manifest_by_symbol.get(s, {}).get("compiler_runtime", False)}
 
     # Header breakdown
     print("Header-by-Header Coverage:")
@@ -115,23 +138,26 @@ def main():
     print()
     print("Summary:")
     print(f"  Total SDK Exports:        {len(total_sdk_exports)}")
-    print(f"  Directly Covered (Active):{len(active_covered)}")
-    print(f"  Covered via Deprecated:   {len(deprecated)}")
-    print(f"  Total Covered:            {len(covered)} / {len(total_sdk_exports)}")
+    print(f"  Covered:                  {len(covered)}")
+    print(f"  Deprecated:               {len(deprecated)}")
+    print(f"  Compiler-Runtime:         {len(compiler_rt)}")
+    print(f"  Unclassified:             {len(unclassified)}")
+    print(f"  Missing:                  {len(missing)}")
     
     coverage_pct = (len(covered) / len(total_sdk_exports) * 100) if total_sdk_exports else 100.0
     print(f"  Coverage Percentage:      {coverage_pct:.1f}%")
     print()
 
     if missing:
-        print("Missing SDK Exports:")
+        print("Missing SDK Exports in src/raw/:")
         for sym in sorted(missing):
             print(f"  - {sym}")
         print()
         sys.exit(1)
     else:
-        print("PASS: 100% of SDK declarations are accounted for in src/raw/.")
+        print("PASS: 100% of SDK declarations are classified in manifest and implemented in src/raw/.")
         sys.exit(0)
 
 if __name__ == "__main__":
     main()
+

@@ -86,19 +86,19 @@ test "OwnedCStringList: runtime.imageNames and classNamesForImage" {
 }
 
 test "Owned descriptors: empty representations" {
-    var empty_methods = objc.OwnedMethodDescriptions.empty();
+    var empty_methods = objc.memory.OwnedMethodDescriptions.empty();
     try testing.expect(empty_methods.isEmpty());
     try testing.expectEqual(@as(usize, 0), empty_methods.count());
     try testing.expect(empty_methods.get(0) == null);
     empty_methods.deinit();
 
-    var empty_attrs = objc.OwnedPropertyAttributes.empty();
+    var empty_attrs = objc.memory.OwnedPropertyAttributes.empty();
     try testing.expect(empty_attrs.isEmpty());
     try testing.expectEqual(@as(usize, 0), empty_attrs.count());
     try testing.expect(empty_attrs.get(0) == null);
     empty_attrs.deinit();
 
-    var empty_strings = objc.OwnedCStringList.empty();
+    var empty_strings = objc.memory.OwnedCStringList.empty();
     try testing.expect(empty_strings.isEmpty());
     try testing.expectEqual(@as(usize, 0), empty_strings.count());
     try testing.expect(empty_strings.get(0) == null);

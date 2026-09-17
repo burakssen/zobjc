@@ -23,9 +23,9 @@ pub fn isRetainable(comptime T: type) bool {
 /// Converts a retainable value into a raw `raw.id` pointer.
 pub inline fn toRawId(val: anytype) raw.id {
     const T = @TypeOf(val);
-    if (T == Object) {
+    if (comptime T == Object) {
         return val.ptr;
-    } else if (isRetainable(T)) {
+    } else if (comptime isRetainable(T)) {
         return val.asObject().ptr;
     } else {
         @compileError(@typeName(T) ++ " is not an Objective-C retainable object type");
@@ -34,9 +34,9 @@ pub inline fn toRawId(val: anytype) raw.id {
 
 /// Converts a non-null raw `*raw.objc_object` pointer into a retainable value T.
 pub inline fn fromRawIdNonNull(comptime T: type, p: *raw.objc_object) T {
-    if (T == Object) {
+    if (comptime T == Object) {
         return Object.fromRawNonNull(p);
-    } else if (isRetainable(T)) {
+    } else if (comptime isRetainable(T)) {
         return T.fromObject(Object.fromRawNonNull(p));
     } else {
         @compileError(@typeName(T) ++ " is not an Objective-C retainable object type");

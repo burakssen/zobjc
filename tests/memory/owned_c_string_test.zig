@@ -75,6 +75,6 @@ test "OwnedCString: intoRaw relinquishes ownership" {
 }
 
 test "OwnedCString: empty fromRaw(null)" {
-    const empty_str = objc.OwnedCString.fromRaw(null);
+    const empty_str = objc.memory.OwnedCString.fromRaw(null);
     try testing.expect(empty_str == null);
 }

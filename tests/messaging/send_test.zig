@@ -5,73 +5,55 @@ const testing = std.testing;
 const objc = @import("objc");
 
 test "send: class method invocation and object creation" {
-    var pool = objc.AutoreleasePool.init();
-    defer pool.deinit();
-
-    const NSNumber = objc.getClass("NSNumber").?;
+    const ABIFixture = objc.getClass("ABIFixture").?;
 
     // Class message via objc.send
-    const num = objc.send(objc.Object, NSNumber, "numberWithInt:", .{@as(c_int, 42)});
+    const sum = objc.send(c_int, ABIFixture, "addInt:to:", .{ @as(c_int, 20), @as(c_int, 22) });
+    try testing.expectEqual(@as(c_int, 42), sum);
 
-    // Instance message via objc.send
-    const val = objc.send(c_int, num, "intValue", .{});
+    // Instance creation and message via objc.send
+    const inst = objc.send(objc.Object, ABIFixture, "new", .{});
+    defer inst.release();
+
+    const val = objc.send(c_int, inst, "echoInt:", .{@as(c_int, 42)});
     try testing.expectEqual(@as(c_int, 42), val);
 }
 
 test "send: scalar arguments and returns" {
-    var pool = objc.AutoreleasePool.init();
-    defer pool.deinit();
-
-    const NSNumber = objc.getClass("NSNumber").?;
+    const ABIFixture = objc.getClass("ABIFixture").?;
 
     // Double
-    const dbl_obj = objc.send(objc.Object, NSNumber, "numberWithDouble:", .{@as(f64, 2.718281828)});
-    const dbl_val = objc.send(f64, dbl_obj, "doubleValue", .{});
-    try testing.expectApproxEqAbs(@as(f64, 2.718281828), dbl_val, 0.000001);
+    const prod = objc.send(f64, ABIFixture, "multiplyDouble:by:", .{ @as(f64, 2.0), @as(f64, 3.14159) });
+    try testing.expectApproxEqAbs(@as(f64, 6.28318), prod, 0.0001);
 
-    // Bool
-    const bool_obj = objc.send(objc.Object, NSNumber, "numberWithBool:", .{true});
-    const bool_val = objc.send(bool, bool_obj, "boolValue", .{});
-    try testing.expect(bool_val);
+    // Instance returnInt
+    const inst = objc.send(objc.Object, ABIFixture, "new", .{});
+    defer inst.release();
+
+    const val = objc.send(c_int, inst, "returnInt", .{});
+    try testing.expectEqual(@as(c_int, 42), val);
 }
 
-test "send: string literal normalization" {
-    var pool = objc.AutoreleasePool.init();
-    defer pool.deinit();
+test "send: aggregate argument and return (ABIPoint)" {
+    const ABIFixture = objc.getClass("ABIFixture").?;
+    const inst = objc.send(objc.Object, ABIFixture, "new", .{});
+    defer inst.release();
 
-    const NSString = objc.getClass("NSString").?;
-
-    // Passing string literal "Hello from zobjc"
-    const str = objc.send(objc.Object, NSString, "stringWithUTF8String:", .{"Hello from zobjc"});
-    const len = objc.send(usize, str, "length", .{});
-    try testing.expectEqual(@as(usize, 16), len);
-
-    const c_str = objc.send([*:0]const u8, str, "UTF8String", .{});
-    try testing.expectEqualStrings("Hello from zobjc", std.mem.span(c_str));
-}
-
-test "send: aggregate argument and return (NSRange)" {
-    var pool = objc.AutoreleasePool.init();
-    defer pool.deinit();
-
-    const NSString = objc.getClass("NSString").?;
-    const str = objc.send(objc.Object, NSString, "stringWithUTF8String:", .{"Hello, World!"});
-
-    const NSRange = extern struct {
-        location: c_ulong,
-        length: c_ulong,
+    const ABIPoint = extern struct {
+        x: f64,
+        y: f64,
     };
 
-    const sub = objc.send(objc.Object, str, "substringWithRange:", .{NSRange{ .location = 7, .length = 5 }});
-    const sub_utf8 = objc.send([*:0]const u8, sub, "UTF8String", .{});
-    try testing.expectEqualStrings("World", std.mem.span(sub_utf8));
+    const pt = objc.send(ABIPoint, inst, "returnPoint", .{});
+    try testing.expectEqual(@as(f64, 10.0), pt.x);
+    try testing.expectEqual(@as(f64, 20.0), pt.y);
 }
 
 test "send: nil receiver semantics" {
     const nil_obj: ?objc.Object = null;
 
     // Messaging nil returns 0 / null without crashing
-    const int_val = objc.send(c_int, nil_obj, "intValue", .{});
+    const int_val = objc.send(c_int, nil_obj, "returnInt", .{});
     try testing.expectEqual(@as(c_int, 0), int_val);
 
     const obj_val = objc.send(?objc.Object, nil_obj, "description", .{});
@@ -79,22 +61,24 @@ test "send: nil receiver semantics" {
 }
 
 test "send: object and class convenience methods" {
-    var pool = objc.AutoreleasePool.init();
-    defer pool.deinit();
-
-    const NSNumber = objc.getClass("NSNumber").?;
+    const ABIFixture = objc.getClass("ABIFixture").?;
 
     // Class.send
-    const num = NSNumber.send(objc.Object, "numberWithInt:", .{@as(c_int, 100)});
+    const sum = ABIFixture.send(c_int, "addInt:to:", .{ @as(c_int, 40), @as(c_int, 60) });
+    try testing.expectEqual(@as(c_int, 100), sum);
+
+    const inst = ABIFixture.send(objc.Object, "new", .{});
+    defer inst.release();
 
     // Object.send
-    const val = num.send(c_int, "intValue", .{});
+    const val = inst.send(c_int, "echoInt:", .{@as(c_int, 100)});
     try testing.expectEqual(@as(c_int, 100), val);
 
     // Class.msgSend compatibility
-    const num2 = NSNumber.msgSend(objc.Object, "numberWithInt:", .{@as(c_int, 200)});
+    const sum2 = ABIFixture.msgSend(c_int, "addInt:to:", .{ @as(c_int, 150), @as(c_int, 50) });
+    try testing.expectEqual(@as(c_int, 200), sum2);
 
     // Object.msgSend compatibility
-    const val2 = num2.msgSend(c_int, "intValue", .{});
+    const val2 = inst.msgSend(c_int, "echoInt:", .{@as(c_int, 200)});
     try testing.expectEqual(@as(c_int, 200), val2);
 }

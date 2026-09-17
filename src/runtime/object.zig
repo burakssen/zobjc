@@ -9,7 +9,6 @@ const Class = @import("class.zig").Class;
 const Selector = @import("selector.zig").Selector;
 const sel_fn = @import("selector.zig").sel;
 const Ivar = @import("ivar.zig").Ivar;
-const Iterator = @import("iterator.zig").Iterator;
 const memory = @import("../memory/root.zig");
 const association = @import("association.zig");
 const AssociationKey = association.AssociationKey;
@@ -262,19 +261,20 @@ pub const Object = struct {
         raw.runtime.object_setIvar(self.ptr, ivar, val.ptr);
     }
 
-    // TODO(phase-3): Integrate retain/release into Retained(T) ownership type.
+    /// Retains the object reference via runtime `objc_retain`.
+    ///
+    /// DEPRECATED: Non-owning `Object` handles do not hold ownership obligations.
+    /// Prefer `objc.Retained(Object).retain(self)` or `objc.Retained(Object).adopt(self)`.
     pub fn retain(self: Object) Object {
         return Object.fromRawNonNull(raw.compiler_runtime.objc_retain(self.ptr).?);
     }
 
+    /// Releases the object reference via runtime `objc_release`.
+    ///
+    /// DEPRECATED: Non-owning `Object` handles do not hold ownership obligations.
+    /// Prefer managing object lifetime via `objc.Retained(Object)`.
     pub fn release(self: Object) void {
         raw.compiler_runtime.objc_release(self.ptr);
-    }
-
-    /// Return an iterator for this object. The object must implement the
-    /// `NSFastEnumeration` protocol.
-    pub fn iterate(self: Object) Iterator {
-        return Iterator.init(self);
     }
 
     comptime {

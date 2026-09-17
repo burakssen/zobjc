@@ -1,7 +1,7 @@
 #ifndef ABI_FIXTURES_H
 #define ABI_FIXTURES_H
 
-#import <Foundation/Foundation.h>
+#import <objc/NSObject.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,9 +64,24 @@ typedef union { long long i; double d; } ABIUnion8;
 - (ABIArrayInStruct)returnArrayInStruct;
 - (ABIUnion8)returnUnion8;
 
++ (int)addInt:(int)a to:(int)b;
++ (double)multiplyDouble:(double)a by:(double)b;
+- (int)echoInt:(int)val;
+
+// Register pressure and spilled arguments
+- (int)sum10Ints:(int)a b:(int)b c:(int)c d:(int)d e:(int)e f:(int)f g:(int)g h:(int)h i:(int)i j:(int)j;
+- (double)sum10Doubles:(double)a b:(double)b c:(double)c d:(double)d e:(double)e f:(double)f g:(double)g h:(double)h i:(double)i j:(double)j;
+- (double)passSize32:(ABISize32)val;
+
+@end
+
+@interface ABISubclass : ABIFixture
+- (int)echoInt:(int)val;
+- (int)callSuperEcho:(int)val;
 @end
 
 #ifdef __cplusplus
+
 }
 #endif
 

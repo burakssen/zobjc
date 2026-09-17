@@ -52,9 +52,14 @@ This roadmap outlines the complete 12-phase technical evolution of `zobjc`.
 - Add support for associated objects (`objc_setAssociatedObject`, `objc_getAssociatedObject`).
 - Add image inspection (`class_copyPropertyList`, `objc_copyImageNames`, `objc_copyClassNamesForImage`).
 
-### Phase 10 — Foundation Separation & Convenience Layer
-- Separate Core Objective-C runtime abstractions from Apple Foundation conveniences.
-- Move `NSFastEnumeration` (`Iterator`) and Cocoa string conversions into a dedicated foundation module.
+### Phase 10 — Foundation Separation & Convenience Layer [COMPLETED]
+- [x] Separate Core Objective-C runtime abstractions from Apple Foundation conveniences (`objc` vs `objc_foundation`).
+- [x] Pure `libobjc` core runtime linking strictly to `libobjc.A.dylib` and `libc`.
+- [x] Verify zero `Foundation.framework` linkage in `test-core` via image introspection and `otool -L`.
+- [x] Move `NSFastEnumeration` (`FastEnumerationIterator`, `fastIterate`) and Cocoa string conversions (`NSString`) into optional `objc_foundation` module.
+- [x] Zero-overhead `NSString` handle with `Retained(NSString)` and UTF-8 conversions.
+- [x] Zero-heap-allocation stack-buffered fast enumeration iterator with safe mutation detection (`error.CollectionMutated`).
+- [x] `NSEnumerator`, `NSRange`, `StringEncoding`, and foundational typedefs.
 
 ### Phase 11 — Comprehensive Test Matrix & CI Hardening
 - Establish cross-architecture testing (macOS aarch64 & x86_64).

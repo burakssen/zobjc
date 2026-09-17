@@ -31,7 +31,6 @@ pub const Ivar = @import("ivar.zig").Ivar;
 pub const Property = @import("property.zig").Property;
 pub const Protocol = @import("protocol.zig").Protocol;
 pub const Imp = @import("imp.zig").Imp;
-pub const Iterator = @import("iterator.zig").Iterator;
 
 // Descriptor types
 pub const MethodDescription = @import("method_description.zig").MethodDescription;
@@ -46,6 +45,7 @@ pub const lookupClass = lookup.lookupClass;
 pub const requireClass = lookup.requireClass;
 pub const getMetaClass = lookup.getMetaClass;
 pub const getProtocol = lookup.getProtocol;
+pub const requireProtocol = lookup.requireProtocol;
 pub const allocateClassPair = lookup.allocateClassPair;
 pub const registerClassPair = lookup.registerClassPair;
 pub const disposeClassPair = lookup.disposeClassPair;

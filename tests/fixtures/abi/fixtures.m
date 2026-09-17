@@ -33,4 +33,33 @@
 - (ABIArrayInStruct)returnArrayInStruct { ABIArrayInStruct a = { { 1.1, 2.2 } }; return a; }
 - (ABIUnion8)returnUnion8 { ABIUnion8 u; u.i = 0x123456789ABCDEF0LL; return u; }
 
++ (int)addInt:(int)a to:(int)b { return a + b; }
++ (double)multiplyDouble:(double)a by:(double)b { return a * b; }
+- (int)echoInt:(int)val { return val; }
+
+- (int)sum10Ints:(int)a b:(int)b c:(int)c d:(int)d e:(int)e f:(int)f g:(int)g h:(int)h i:(int)i j:(int)j {
+    return a + b + c + d + e + f + g + h + i + j;
+}
+
+- (double)sum10Doubles:(double)a b:(double)b c:(double)c d:(double)d e:(double)e f:(double)f g:(double)g h:(double)h i:(double)i j:(double)j {
+    return a + b + c + d + e + f + g + h + i + j;
+}
+
+- (double)passSize32:(ABISize32)val {
+    return val.a + val.b + val.c + val.d;
+}
+
 @end
+
+@implementation ABISubclass
+
+- (int)echoInt:(int)val {
+    return [super echoInt:val] * 10;
+}
+
+- (int)callSuperEcho:(int)val {
+    return [super echoInt:val];
+}
+
+@end
+

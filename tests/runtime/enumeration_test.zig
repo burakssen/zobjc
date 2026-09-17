@@ -7,19 +7,19 @@ const testing = std.testing;
 
 test "hierarchy introspection: isSubclassOf and isStrictSubclassOf" {
     const NSObject = objc.requireClass("NSObject");
-    const NSString = objc.requireClass("NSString");
+    const FixtureCls = objc.requireClass("ABIFixture");
 
     // Reflexive
     try testing.expect(NSObject.isSubclassOf(NSObject));
     try testing.expect(!NSObject.isStrictSubclassOf(NSObject));
 
     // Subclass
-    try testing.expect(NSString.isSubclassOf(NSObject));
-    try testing.expect(NSString.isStrictSubclassOf(NSObject));
+    try testing.expect(FixtureCls.isSubclassOf(NSObject));
+    try testing.expect(FixtureCls.isStrictSubclassOf(NSObject));
 
     // Reverse
-    try testing.expect(!NSObject.isSubclassOf(NSString));
-    try testing.expect(!NSObject.isStrictSubclassOf(NSString));
+    try testing.expect(!NSObject.isSubclassOf(FixtureCls));
+    try testing.expect(!NSObject.isStrictSubclassOf(FixtureCls));
 }
 
 test "class enumeration: early stop" {

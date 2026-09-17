@@ -41,3 +41,13 @@ test "block can be accessed independently" {
 test "builder placeholder can be accessed independently" {
     _ = objc.builder;
 }
+
+test "core architecture: Foundation is not loaded in core test process" {
+    var image_list = objc.runtime.images();
+    defer image_list.deinit();
+
+    var iter = image_list.iterator();
+    while (iter.next()) |img| {
+        try std.testing.expect(std.mem.indexOf(u8, img, "Foundation.framework") == null);
+    }
+}

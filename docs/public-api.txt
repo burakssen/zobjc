@@ -1,0 +1,162 @@
+# zobjc 1.0.0 Public API Manifest
+#
+# This file catalogs every public symbol in the zobjc package, its classification,
+# and its SemVer stability guarantee.
+#
+# Stability Tiers:
+#   [STABLE]       - Covered by SemVer 2.0.0. No breaking changes in minor/patch releases.
+#   [ADVANCED]     - Covered by SemVer 2.0.0, but low-level or dangerous semantics.
+#   [DEPRECATED]   - Supported for backward compatibility; replacement is documented.
+#   [RAW]          - Mirrors Apple SDK public C ABI declarations; tracks Apple updates.
+#   [EXPERIMENTAL] - Publicly accessible, but explicitly exempt from SemVer guarantees.
+
+================================================================================
+1. Root Namespace: objc.*
+================================================================================
+
+-- Core Handles & Types --
+[STABLE]       objc.Object                  Non-owning handle to Objective-C object instance (id)
+[STABLE]       objc.Class                   Non-owning handle to Objective-C class (Class)
+[STABLE]       objc.Selector                Non-owning handle to Objective-C method selector (SEL)
+[DEPRECATED]   objc.Sel                     Alias to objc.Selector (retained for backward compatibility)
+[STABLE]       objc.Method                  Non-owning handle to Objective-C method (Method)
+[STABLE]       objc.Ivar                    Non-owning handle to Objective-C instance variable (Ivar)
+[STABLE]       objc.Property                Non-owning handle to Objective-C declared property (objc_property_t)
+[STABLE]       objc.Protocol                Non-owning handle to Objective-C protocol (Protocol*)
+[STABLE]       objc.Imp                     Non-owning function pointer handle to method implementation (IMP)
+
+-- Descriptors & Options --
+[STABLE]       objc.MethodDescription       Method descriptor struct (name, types)
+[STABLE]       objc.PropertyAttribute       Property attribute key/value pair
+[STABLE]       objc.ProtocolMethodOptions   Lookup options for protocol methods (required, instance)
+[STABLE]       objc.ProtocolPropertyOptions Lookup options for protocol properties (required, instance)
+
+-- Global Runtime Lookups & Lifecycle --
+[STABLE]       objc.getClass(name)          Nullable class lookup
+[STABLE]       objc.lookupClass(name)       Nullable dynamic class lookup
+[STABLE]       objc.requireClass(name)      Non-null class lookup (aborts/panics on failure)
+[STABLE]       objc.getMetaClass(name)      Nullable metaclass lookup
+[STABLE]       objc.getProtocol(name)       Nullable protocol lookup
+[STABLE]       objc.requireProtocol(name)   Non-null protocol lookup (panics on failure)
+[STABLE]       objc.allocateClassPair       Allocates unpopulated dynamic class/metaclass pair
+[STABLE]       objc.registerClassPair       Registers allocated dynamic class with runtime
+[STABLE]       objc.disposeClassPair        Disposes registered dynamic class
+[STABLE]       objc.classes()               Returns RAII OwnedRuntimeList(Class) of all registered classes
+[STABLE]       objc.protocols()             Returns RAII OwnedRuntimeList(Protocol) of all protocols
+[STABLE]       objc.sel(name)               Registers/looks up selector by name
+
+-- Messaging Engine --
+[STABLE]       objc.send(Ret, recv, sel, args)         Canonical type-safe message dispatch
+[STABLE]       objc.sendSuper(Ret, recv, cur_cls, ...) Superclass message dispatch (Super2 contract)
+[STABLE]       objc.invoke(Ret, method, recv, args)    Direct method implementation invocation
+[STABLE]       objc.callImp(Ret, imp, recv, sel, args) Direct IMP function pointer call
+
+-- Memory & Ownership Management --
+[STABLE]       objc.Retained(T)             Explicit RAII +1 reference owner (adopt, retain, borrow, clone, deinit)
+[STABLE]       objc.Weak(T)                 Zeroing weak reference tracking address in runtime weak table
+[STABLE]       objc.AutoreleasePool         Scoped autorelease pool wrapper (init, deinit via pop)
+[DEPRECATED]   objc.free(ptr)               Deprecated C free; use RAII containers or objc.raw.runtime.free
+
+-- Objective-C Blocks --
+[STABLE]       objc.Block(Fn)               Non-owning handle to Objective-C block
+[STABLE]       objc.OwnedBlock(Fn)          RAII heap-promoted block owner (fromFunction, capture, call, deinit)
+[DEPRECATED]   objc.LegacyBlock(...)        3-type-param legacy block constructor for backward compatibility
+
+-- Type Encoding --
+[STABLE]       objc.Encoding                Type encoding union descriptor
+[STABLE]       objc.comptimeEncode(T)       Compile-time @encode equivalent matching Clang signatures
+[STABLE]       objc.methodEncoding(F)       Generates full Objective-C method signature string (e.g. "v@:i")
+[STABLE]       objc.StorageType(T)          C ABI compatible storage type for field/ivar
+
+-- Dynamic Class & Protocol Builders --
+[STABLE]       objc.ClassBuilder            Type-safe builder with state machine: init, addIvar, addMethod, register
+[STABLE]       objc.ProtocolBuilder         Type-safe protocol builder: init, addMethod, inherit, register
+[STABLE]       objc.PropertyOptions         Builder options for declared properties
+
+-- Associated Objects & Swizzling --
+[STABLE]       objc.AssociationKey          Type-safe distinct key type for object associations
+[STABLE]       objc.AssociationPolicy       Association ownership policy enum (assign, retain_nonatomic, copy, etc.)
+[STABLE]       objc.Swizzle                 Atomic method swizzling transaction
+[STABLE]       objc.ScopedSwizzle           RAII auto-reverting scoped method swizzle
+[STABLE]       objc.MethodReplacement       Permanent or scoped method replacement transaction
+[STABLE]       objc.BlockMethodReplacement  Replaces method implementation with an Objective-C block
+
+-- Subsystem Namespaces --
+[STABLE]       objc.runtime                 Comprehensive runtime entity operations & enumeration
+[STABLE]       objc.encoding                Parser, AST, qualifiers, and signature analysis
+[STABLE]       objc.abi                     Darwin ABI classifier (normal, stret, fpret, fp2ret)
+[STABLE]       objc.memory                  Ownership containers (OwnedCString, OwnedRuntimeList, etc.)
+[STABLE]       objc.messaging               Low-level dispatch, validation, argument normalization
+[STABLE]       objc.block                   Block captures (Strong, Weak, ByRef, BlockRef), OwnedImp
+[STABLE]       objc.builder                 ClassBuilder, ProtocolBuilder internals and attributes
+[ADVANCED]     objc.advanced                Intentionally dangerous runtime memory/state operations
+[RAW]          objc.raw                     Public C ABI bindings to Apple libobjc
+
+================================================================================
+2. Handle Member Methods
+================================================================================
+
+-- objc.Object --
+[STABLE]       object.send(Ret, sel, args)             Convenience dispatch delegating to objc.send
+[DEPRECATED]   object.msgSend(Ret, sel, args)          Compatibility alias for object.send
+[STABLE]       object.sendSuper(Ret, cur_cls, sel, args) Superclass dispatch delegating to objc.sendSuper
+[DEPRECATED]   object.msgSendSuper(super, Ret, sel, ...) Compatibility alias for object.sendSuper
+[STABLE]       object.class()                          Returns non-owning Class handle
+[STABLE]       object.className()                      Returns [:0]const u8 class name
+[STABLE]       object.isClass()                        Returns true if object is a class
+[STABLE]       object.setAssociated(key, val, policy)  Attaches associated object
+[STABLE]       object.associated(key)                  Retrieves non-owning associated object
+[STABLE]       object.clearAssociated(key)             Clears associated object for key
+[STABLE]       object.associatedRetained(key)          Retrieves associated object as Retained(Object)
+[DEPRECATED]   object.retain()                         Bare non-owning retain; use Retained(Object).retain()
+[DEPRECATED]   object.release()                        Bare release; manage lifetime via Retained(Object)
+
+-- objc.Class --
+[STABLE]       class.send(Ret, sel, args)              Convenience class message dispatch
+[DEPRECATED]   class.msgSend(Ret, sel, args)           Compatibility alias for class.send
+[STABLE]       class.name()                            Returns [:0]const u8 class name
+[STABLE]       class.superclass()                      Returns optional superclass Class handle
+[STABLE]       class.isMetaClass()                     Returns true if class is a metaclass
+[STABLE]       class.instanceSize()                    Returns instance allocation size in bytes
+[STABLE]       class.methods()                         Returns RAII OwnedRuntimeList(Method)
+[STABLE]       class.classMethods()                    Returns RAII OwnedRuntimeList(Method) from metaclass
+[STABLE]       class.ivars()                           Returns RAII OwnedRuntimeList(Ivar)
+[STABLE]       class.properties()                      Returns RAII OwnedRuntimeList(Property)
+[STABLE]       class.protocols()                       Returns RAII OwnedRuntimeList(Protocol)
+[STABLE]       class.conformsToProtocol(proto)         Returns true if class adopts protocol
+[STABLE]       class.createInstance(extra_bytes)       Creates instance as non-owning Object
+[STABLE]       class.createInstanceRetained(extra)     Creates instance as owning Retained(Object)
+
+================================================================================
+3. Advanced Namespace: objc.advanced.*
+================================================================================
+[ADVANCED]     objc.advanced.constructInstance         Initializes instance in caller-allocated memory
+[ADVANCED]     objc.advanced.destructInstance          Destructs instance without freeing memory
+[ADVANCED]     objc.advanced.copyObjectMemory          Copies instance memory with extra bytes
+[ADVANCED]     objc.advanced.disposeObjectMemory       Deallocates instance without sending dealloc
+[ADVANCED]     objc.advanced.removeAllAssociatedObjects Mass dissociation of all keys from target
+
+================================================================================
+4. Raw C ABI: objc.raw.*
+================================================================================
+[RAW]          objc.raw.runtime.*                      115 public symbols from <objc/runtime.h>
+[RAW]          objc.raw.objc.*                         9 public symbols from <objc/objc.h>
+[RAW]          objc.raw.message.*                      10 public symbols from <objc/message.h>
+[RAW]          objc.raw.sync.*                         2 public symbols from <objc/objc-sync.h>
+[RAW]          objc.raw.exception.*                    10 public symbols from <objc/objc-exception.h>
+[RAW]          objc.raw.compiler_runtime.*             ARC runtime primitives (objc_retain, objc_release, etc.)
+
+================================================================================
+5. Unstable / Internal: objc.raw.internal.*
+================================================================================
+[EXPERIMENTAL] objc.raw.internal.*                     Apple private SPI (objc_setForwardHandler, etc.)
+                                                       Explicitly exempt from SemVer.
+
+================================================================================
+6. Optional Foundation Integration: objc_foundation.*
+================================================================================
+[STABLE]       objc_foundation.string.toNSString       Converts UTF-8 slice into Retained(Object) NSString
+[STABLE]       objc_foundation.string.toSlice          Copies NSString contents into Zig allocator slice
+[STABLE]       objc_foundation.FastEnumerationIterator Stack-buffered iterator for NSFastEnumeration
+[STABLE]       objc_foundation.fast_enumeration.each   Closure callback iteration over collections
+[STABLE]       objc_foundation.types.*                 Common Foundation structs (NSRange, NSPoint, etc.)

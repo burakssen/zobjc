@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  verify:
+    name: Verify on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-13]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.16.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Runtime API Audit
+        run: zig build audit-runtime
+
+      - name: Run Core, Foundation & Integration Tests
+        run: zig build test
+
+      - name: Run SDK Header Parity Suite
+        run: zig build test-parity
+
+      - name: Run Clang Differential Interop Suite
+        run: zig build test-differential
+
+      - name: Run Upstream Compatibility Suite
+        run: zig build test-compat
+
+      - name: Run Compile-Fail Rejection Suite
+        run: zig build test-compile-fail
+
+      - name: Run Standalone Consumer Test
+        run: zig build test-consumer
+
+      - name: Run Multi-Platform Cross-Compilation
+        run: zig build test-cross

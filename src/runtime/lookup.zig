@@ -38,6 +38,12 @@ pub inline fn getProtocol(name: [:0]const u8) ?Protocol {
     return Protocol.fromRaw(raw.runtime.objc_getProtocol(name.ptr));
 }
 
+/// Looks up a protocol by name, aborting or panicking if not found.
+/// Corresponds to `requireClass` for protocol handles.
+pub inline fn requireProtocol(name: [:0]const u8) Protocol {
+    return getProtocol(name) orelse std.debug.panic("Required Objective-C protocol not found: {s}", .{name});
+}
+
 // --- Dynamic Class Pair Management ---
 
 /// Allocates a new class and metaclass pair.

@@ -51,8 +51,8 @@ test "class: NSObject introspection" {
 }
 
 test "class: subclass superclass hierarchy" {
-    const string_cls = objc.requireClass("NSString");
-    const super_cls = string_cls.superclass();
+    const fixture_cls = objc.requireClass("ABIFixture");
+    const super_cls = fixture_cls.superclass();
     try testing.expect(super_cls != null);
     try testing.expectEqualStrings("NSObject", super_cls.?.name());
 }

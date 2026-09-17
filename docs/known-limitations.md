@@ -46,7 +46,7 @@ This document catalogues intentional architectural and functional limitations pr
 
 ---
 
-## 7. Foundation Coupling
-
-- **Limitation**: `NSFastEnumeration` support (`Iterator`) currently resides inside `runtime/` and depends on Foundation framework linkage.
-- **Phase Mitigation**: **Phase 10 (Foundation Separation & Convenience Layer)** will decouple core runtime bindings from Apple Foundation conveniences.
+## 7. Foundation Coupling (Resolved in Phase 10)
+ 
+- **Previous Limitation**: `NSFastEnumeration` support (`Iterator`) resided inside `runtime/` and depended on Foundation framework linkage.
+- **Resolution**: **Phase 10 (Foundation Separation & Convenience Layer)** completely decoupled core runtime bindings from Foundation. The core `objc` module links strictly to `libobjc` with zero Foundation dependencies. All Foundation types and collection fast enumeration protocols now reside in the optional `objc_foundation` module.

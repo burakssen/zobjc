@@ -78,7 +78,7 @@ test "OwnedRuntimeList: objc.classes" {
     var all_classes = objc.classes();
     defer all_classes.deinit();
 
-    try testing.expect(all_classes.count() > 100);
+    try testing.expect(all_classes.count() >= 5);
 
     var found_nsobject = false;
     var iter = all_classes.iterator();
@@ -109,7 +109,7 @@ test "OwnedRuntimeList: objc.protocols" {
 }
 
 test "OwnedRuntimeList: empty container behavior" {
-    var empty_list = objc.OwnedRuntimeList(objc.Method).empty();
+    var empty_list = objc.memory.OwnedRuntimeList(objc.Method).empty();
     try testing.expect(empty_list.isEmpty());
     try testing.expectEqual(@as(usize, 0), empty_list.count());
     try testing.expect(empty_list.get(0) == null);

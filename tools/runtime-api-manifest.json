@@ -1,0 +1,1462 @@
+[
+  {
+    "symbol": "_objc_flush_caches",
+    "header": "objc/runtime.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "_objc_msgForward",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "_objc_msgForward_stret",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "unavailable(arm64)",
+    "architecture": "x86_64,arm",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "_objc_realizeClassFromSwift",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_addIvar",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_addMethod",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_addProperty",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_addProtocol",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_conformsToProtocol",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_copyIvarList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_copyMethodList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_copyPropertyList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_copyProtocolList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_createInstance",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_createInstanceFromZone",
+    "header": "objc/runtime.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "class_getClassMethod",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getClassVariable",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getImageName",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getInstanceMethod",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getInstanceSize",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getInstanceVariable",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getIvarLayout",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getMethodImplementation",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getMethodImplementation_stret",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "unavailable(arm64)",
+    "architecture": "x86_64,arm",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getName",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getProperty",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getSuperclass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getVersion",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_getWeakIvarLayout",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_isMetaClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_lookupMethod",
+    "header": "objc/runtime.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "class_replaceMethod",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_replaceProperty",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_respondsToMethod",
+    "header": "objc/runtime.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "class_respondsToSelector",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_setIvarLayout",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_setSuperclass",
+    "header": "objc/runtime.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "class_setVersion",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "class_setWeakIvarLayout",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "imp_getBlock",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "imp_implementationWithBlock",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "imp_removeBlock",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "ivar_getName",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "ivar_getOffset",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "ivar_getTypeEncoding",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_copyArgumentType",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_copyReturnType",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_exchangeImplementations",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_getArgumentType",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_getDescription",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_getImplementation",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_getName",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_getNumberOfArguments",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_getReturnType",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_getTypeEncoding",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_invoke",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_invoke_stret",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "unavailable(arm64)",
+    "architecture": "x86_64,arm",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "method_setImplementation",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_addExceptionHandler",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_addLoadImageFunc",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_allocateClassPair",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_allocateProtocol",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_begin_catch",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_constructInstance",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_copyClassList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_copyClassNamesForImage",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_copyImageNames",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_copyProtocolList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_destructInstance",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_disposeClassPair",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_duplicateClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_end_catch",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_enumerateClasses",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_enumerationMutation",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_exception_rethrow",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_exception_throw",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_getAssociatedObject",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_getClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_getClassList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_getFutureClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_getMetaClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_getProtocol",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_getRequiredClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_loadWeak",
+    "header": "objc/runtime.h",
+    "classification": "compiler_runtime",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": true,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_lookUpClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_msgSend",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_msgSendSuper",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_msgSendSuper_stret",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "unavailable(arm64)",
+    "architecture": "x86_64,arm",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_msgSend_fp2ret",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "x86_64_only",
+    "architecture": "x86_64",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_msgSend_fpret",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "x86_64_only",
+    "architecture": "x86_64",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_msgSend_stret",
+    "header": "objc/message.h",
+    "classification": "public",
+    "availability": "unavailable(arm64)",
+    "architecture": "x86_64,arm",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_registerClassPair",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_registerProtocol",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_removeAssociatedObjects",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_removeExceptionHandler",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_retainedObject",
+    "header": "objc/objc.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "objc_setAssociatedObject",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setEnumerationMutationHandler",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setExceptionMatcher",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setExceptionPreprocessor",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setForwardHandler",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setHook_getClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setHook_getImageName",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setHook_lazyClassNamer",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_setUncaughtExceptionHandler",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_storeWeak",
+    "header": "objc/runtime.h",
+    "classification": "compiler_runtime",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": true,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_sync_enter",
+    "header": "objc/objc-sync.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_sync_exit",
+    "header": "objc/objc-sync.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_terminate",
+    "header": "objc/objc-exception.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "objc_unretainedObject",
+    "header": "objc/objc.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "objc_unretainedPointer",
+    "header": "objc/objc.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "object_copy",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_copyFromZone",
+    "header": "objc/runtime.h",
+    "classification": "deprecated",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": true,
+    "compiler_runtime": false,
+    "high_level_wrapper": false
+  },
+  {
+    "symbol": "object_dispose",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_getClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_getClassName",
+    "header": "objc/objc.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_getIndexedIvars",
+    "header": "objc/objc.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_getInstanceVariable",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_getIvar",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_isClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_setClass",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_setInstanceVariable",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_setInstanceVariableWithStrongDefault",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_setIvar",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "object_setIvarWithStrongDefault",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "property_copyAttributeList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "property_copyAttributeValue",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "property_getAttributes",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "property_getName",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_addMethodDescription",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_addProperty",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_addProtocol",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_conformsToProtocol",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_copyMethodDescriptionList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_copyPropertyList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_copyPropertyList2",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_copyProtocolList",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_getMethodDescription",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_getName",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_getProperty",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "protocol_isEqual",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "sel_getName",
+    "header": "objc/objc.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "sel_getUid",
+    "header": "objc/objc.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "sel_isEqual",
+    "header": "objc/runtime.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "sel_isMapped",
+    "header": "objc/objc.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  },
+  {
+    "symbol": "sel_registerName",
+    "header": "objc/objc.h",
+    "classification": "public",
+    "availability": "all",
+    "architecture": "all",
+    "deprecated": false,
+    "compiler_runtime": false,
+    "high_level_wrapper": true
+  }
+]
