@@ -4,9 +4,10 @@
 //! that seamlessly migrate to the heap when copied by an Apple Block.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 const cell_mod = @import("byref_cell.zig");
 const traits_mod = @import("capture_traits.zig");
+const owned_mod = @import("owned.zig");
 
 /// Token representing a captured ByRef cell inside a Block literal.
 pub fn ByRefCapture(comptime T: type) type {
@@ -102,4 +103,61 @@ test "ByRef basic stack initialization and mutation" {
     try std.testing.expectEqual(@as(c_int, 42), cell.get().*);
     cell.get().* = 100;
     try std.testing.expectEqual(@as(c_int, 100), cell.get().*);
+}
+
+fn makeEscapedBlock() !owned_mod.OwnedBlock(fn (c_int) c_int) {
+    var count: ByRef(c_int) = .{};
+    count.init(100);
+    defer count.deinit();
+
+    const Captures = struct {
+        counter: ByRefCapture(c_int),
+    };
+
+    return try owned_mod.OwnedBlock(fn (c_int) c_int).capture(
+        Captures,
+        .{ .counter = count.capture() },
+        struct {
+            fn add(caps: *const Captures, delta: c_int) c_int {
+                const cell: *cell_mod.ByRefCell(c_int) = @ptrCast(@alignCast(caps.counter.cell_ptr));
+                cell.forwarding.value += delta;
+                return cell.forwarding.value;
+            }
+        }.add,
+    );
+}
+
+test "byref: stack mutation via forwarding pointer" {
+    var count: ByRef(c_int) = .{};
+    count.init(10);
+    defer count.deinit();
+
+    const Captures = struct {
+        counter: ByRefCapture(c_int),
+    };
+
+    var blk = try owned_mod.OwnedBlock(fn (c_int) void).capture(
+        Captures,
+        .{ .counter = count.capture() },
+        struct {
+            fn step(caps: *const Captures, delta: c_int) void {
+                const cell: *cell_mod.ByRefCell(c_int) = @ptrCast(@alignCast(caps.counter.cell_ptr));
+                cell.forwarding.value += delta;
+            }
+        }.step,
+    );
+    defer blk.deinit();
+
+    blk.call(.{5});
+    try std.testing.expectEqual(@as(c_int, 15), count.get().*);
+    blk.call(.{10});
+    try std.testing.expectEqual(@as(c_int, 25), count.get().*);
+}
+
+test "byref: outlives original stack frame via heap promotion" {
+    var escaped = try makeEscapedBlock();
+    defer escaped.deinit();
+
+    try std.testing.expectEqual(@as(c_int, 125), escaped.call(.{25}));
+    try std.testing.expectEqual(@as(c_int, 175), escaped.call(.{50}));
 }

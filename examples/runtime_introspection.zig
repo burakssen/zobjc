@@ -1,7 +1,7 @@
-//! Example demonstrating Phase 2 runtime introspection handles.
+//! Example demonstrating runtime introspection handles.
 
 const std = @import("std");
-const objc = @import("objc");
+const objc = @import("zobjc");
 
 pub fn main() void {
     // 1. Class Introspection
@@ -37,9 +37,9 @@ pub fn main() void {
     }
 
     // 4. Instance Introspection
-    const obj = cls.msgSend(objc.Object, "alloc", .{})
-        .msgSend(objc.Object, "init", .{});
-    defer obj.msgSend(void, "dealloc", .{});
+    const obj = cls.send(objc.Object, "alloc", .{})
+        .send(objc.Object, "init", .{});
+    defer obj.send(void, "dealloc", .{});
 
     std.debug.print("Object: instance of {s}\n", .{obj.className()});
     std.debug.print("  isClass: {}\n", .{obj.isClass()});

@@ -5,7 +5,7 @@
 
 const builtin = @import("builtin");
 
-// ponytail: Use pure comptime boolean predicates instead of runtime checks.
+// Use pure comptime boolean predicates instead of runtime checks.
 
 /// Apple <objc/message.h>: Struct-returning entry points (objc_msgSend_stret,
 /// objc_msgSendSuper_stret, method_invoke_stret, _objc_msgForward_stret) are unavailable on ARM64.

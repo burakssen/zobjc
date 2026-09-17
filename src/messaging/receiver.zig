@@ -4,12 +4,12 @@
 //! into the standard C ABI receiver pointer (`raw.id`).
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const runtime = @import("../runtime/root.zig");
+const raw = @import("raw");
+const runtime = @import("runtime");
 const Object = runtime.Object;
 const Class = runtime.Class;
 
-// ponytail: Pure compile-time type validation with zero-cost pointer cast.
+// Pure compile-time type validation with zero-cost pointer cast.
 
 /// Returns true if `T` is a valid Objective-C message receiver type.
 pub fn isValidReceiver(comptime T: type) bool {

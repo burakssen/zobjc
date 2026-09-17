@@ -4,10 +4,12 @@
 //! and superclass relationship with early stopping and runtime availability detection.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const Class = @import("class.zig").Class;
 const Protocol = @import("protocol.zig").Protocol;
-const block = @import("../block/root.zig");
+const block = @import("block");
 
 pub const EnumerateClassesFn = *const fn (
     image: ?*const anyopaque,
@@ -74,7 +76,7 @@ pub fn enumerateClasses(
 
     const RawBlockSig = fn (raw.Class, *raw.BOOL) void;
 
-    // // ponytail: bridge through Phase 8 createBlock with stack-to-heap promotion
+    // // bridge through createBlock with stack-to-heap promotion
     var closure_block = try block.createBlock(
         RawBlockSig,
         Captures,
@@ -104,4 +106,119 @@ pub fn enumerateClasses(
         raw_super,
         closure_block.borrow().asObject().toRaw(),
     );
+}
+
+test "class enumeration: early stop" {
+    if (!hasClassEnumeration()) return;
+
+    var count: usize = 0;
+    try enumerateClasses(.{}, &count, struct {
+        fn cb(c_ptr: *usize, cls: Class) bool {
+            _ = cls;
+            c_ptr.* += 1;
+            return c_ptr.* < 2;
+        }
+    }.cb);
+    try testing.expectEqual(@as(usize, 2), count);
+}
+
+test "class enumeration: prefix filter" {
+    if (!hasClassEnumeration()) return;
+
+    var count: usize = 0;
+    var all_start_with_dealloc = true;
+    var ctx = struct {
+        cnt: *usize,
+        matched: *bool,
+    }{ .cnt = &count, .matched = &all_start_with_dealloc };
+
+    try enumerateClasses(.{ .name_prefix = "Dealloc" }, &ctx, struct {
+        fn cb(c: anytype, cls: Class) bool {
+            c.cnt.* += 1;
+            const cls_name = cls.name();
+            if (!std.mem.startsWith(u8, cls_name, "Dealloc")) {
+                c.matched.* = false;
+                return false;
+            }
+            return true;
+        }
+    }.cb);
+
+    try testing.expect(count > 0);
+    try testing.expect(all_start_with_dealloc);
+}
+
+test "class enumeration: protocol filter" {
+    if (!hasClassEnumeration()) return;
+    const NSCopying = objc.getProtocol("NSCopying") orelse return;
+
+    var count: usize = 0;
+    var all_conform = true;
+    var ctx = struct {
+        cnt: *usize,
+        matched: *bool,
+        proto: Protocol,
+    }{ .cnt = &count, .matched = &all_conform, .proto = NSCopying };
+
+    try enumerateClasses(.{ .conforming_to = NSCopying }, &ctx, struct {
+        fn cb(c: anytype, cls: Class) bool {
+            c.cnt.* += 1;
+            if (!cls.conformsTo(c.proto)) {
+                c.matched.* = false;
+                return false;
+            }
+            return c.cnt.* < 15;
+        }
+    }.cb);
+
+    try testing.expect(count > 0);
+    try testing.expect(all_conform);
+}
+
+test "class enumeration: superclass filter" {
+    if (!hasClassEnumeration()) return;
+    const NSObject = objc.requireClass("NSObject");
+
+    var count: usize = 0;
+    var all_subclasses = true;
+    var ctx = struct {
+        cnt: *usize,
+        matched: *bool,
+        super_cls: Class,
+    }{ .cnt = &count, .matched = &all_subclasses, .super_cls = NSObject };
+
+    try enumerateClasses(.{ .subclassing = NSObject }, &ctx, struct {
+        fn cb(c: anytype, cls: Class) bool {
+            c.cnt.* += 1;
+            if (!cls.isSubclassOf(c.super_cls)) {
+                c.matched.* = false;
+                return false;
+            }
+            return c.cnt.* < 20;
+        }
+    }.cb);
+
+    try testing.expect(count > 0);
+    try testing.expect(all_subclasses);
+}
+
+test "class enumeration: dynamic class filter" {
+    if (!hasClassEnumeration()) return;
+
+    const NSObject = objc.requireClass("NSObject");
+    const dyn_cls = objc.allocateClassPair(NSObject, "EnumTestDynamicClass").?;
+    objc.registerClassPair(dyn_cls);
+    defer objc.disposeClassPair(dyn_cls);
+
+    var found_dyn = false;
+    try enumerateClasses(.{ .image = .dynamic }, &found_dyn, struct {
+        fn cb(found: *bool, cls: Class) bool {
+            if (std.mem.eql(u8, cls.name(), "EnumTestDynamicClass")) {
+                found.* = true;
+                return false;
+            }
+            return true;
+        }
+    }.cb);
+    try testing.expect(found_dyn);
 }

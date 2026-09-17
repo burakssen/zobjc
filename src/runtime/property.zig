@@ -3,10 +3,12 @@
 //! A non-owning, non-null handle to an Objective-C declared property (`objc_property_t`).
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const conversion = @import("conversion.zig");
-const memory = @import("../memory/root.zig");
-const encoding = @import("../encoding/root.zig");
+const memory = @import("memory");
+const encoding = @import("encoding");
 
 pub const Property = struct {
     ptr: *raw.objc_property,
@@ -61,15 +63,46 @@ pub const Property = struct {
         return encoding.parseProperty(allocator, attrs);
     }
 
-    // --- Backward Compatibility Aliases ---
-
-    /// Legacy alias for name.
-    pub inline fn getName(self: Property) [:0]const u8 {
-        return self.name();
-    }
-
     comptime {
         std.debug.assert(@sizeOf(@This()) == @sizeOf(raw.objc_property_t));
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.objc_property_t));
     }
 };
+
+test "property: dynamic class property introspection" {
+    const NSObject = objc.requireClass("NSObject");
+    const Subclass = objc.allocateClassPair(NSObject, "PropertyTestClass").?;
+    const attrs = [_]objc.PropertyAttribute{
+        .{ .name = "T", .value = "@\"NSString\"" },
+        .{ .name = "C", .value = "" },
+        .{ .name = "N", .value = "" },
+        .{ .name = "V", .value = "_title" },
+    };
+    try testing.expect(Subclass.addProperty("title", &attrs));
+    objc.registerClassPair(Subclass);
+    defer objc.disposeClassPair(Subclass);
+
+    const prop = Subclass.property("title").?;
+    try testing.expectEqualStrings("title", prop.name());
+    try testing.expect(prop.attributes() != null);
+    try testing.expect(prop.attributes().?.len > 0);
+
+    if (prop.copyAttributeValue("V")) |val| {
+        var owned = val;
+        defer owned.deinit();
+        try testing.expectEqualStrings("_title", owned.slice());
+    } else return error.AttributeValueNotFound;
+    try testing.expect(prop.eql(prop));
+}
+
+test "conversion: Property fromRaw and toRaw roundtrip" {
+    const NSObject = objc.requireClass("NSObject");
+    const prop = NSObject.property("className") orelse NSObject.property("description").?;
+    try testing.expect(prop.eql(Property.fromRaw(prop.toRaw()).?));
+    try testing.expectEqual(@as(?Property, null), Property.fromRaw(null));
+}
+
+test "handle: Property is pointer-sized and pointer-aligned" {
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Property));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Property));
+}

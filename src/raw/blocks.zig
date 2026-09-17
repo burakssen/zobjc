@@ -3,6 +3,8 @@
 //! Mirrors compiler-rt / Apple BlocksRuntime ABI structures and helper entry points.
 
 const std = @import("std");
+const testing = std.testing;
+const raw = @import("zobjc").raw;
 
 /// Flags passed to _Block_object_assign and _Block_object_dispose.
 ///
@@ -106,3 +108,50 @@ pub extern "c" fn _Block_object_assign(dst: *anyopaque, src: ?*const anyopaque, 
 
 /// Releases an object captured by a block.
 pub extern "c" fn _Block_object_dispose(src: ?*const anyopaque, flag: c_int) void;
+
+test "Blocks runtime structures and flags" {
+    try testing.expectEqual(3, @intFromEnum(raw.blocks.BlockFieldFlags.object));
+    try testing.expectEqual(7, @intFromEnum(raw.blocks.BlockFieldFlags.block));
+    try testing.expectEqual(8, @intFromEnum(raw.blocks.BlockFieldFlags.byref));
+    try testing.expectEqual(16, @intFromEnum(raw.blocks.BlockFieldFlags.weak));
+    try testing.expectEqual(128, @intFromEnum(raw.blocks.BlockFieldFlags.byref_caller));
+
+    try testing.expectEqual(@sizeOf(c_int), @sizeOf(raw.blocks.BlockFlags));
+
+    const expected_desc_size = 2 * @sizeOf(c_ulong) + 3 * @sizeOf(usize);
+    try testing.expectEqual(expected_desc_size, @sizeOf(raw.blocks.BlockDescriptor));
+
+    const expected_literal_size = @sizeOf(usize) + 2 * @sizeOf(c_int) + 2 * @sizeOf(usize);
+    try testing.expectEqual(expected_literal_size, @sizeOf(raw.blocks.BlockLiteral));
+}
+
+fn dummyInvoke(_: *anyopaque) callconv(.c) void {}
+fn dummyCopy(_: *anyopaque, _: *anyopaque) callconv(.c) void {}
+fn dummyDispose(_: *anyopaque) callconv(.c) void {}
+
+test "raw.blocks: block copy and release" {
+    const desc = raw.blocks.BlockDescriptor{
+        .reserved = 0,
+        .size = @sizeOf(raw.blocks.BlockLiteral),
+        .copy_helper = &dummyCopy,
+        .dispose_helper = &dummyDispose,
+        .signature = "v8@?0",
+    };
+
+    var flags: raw.blocks.BlockFlags = .{
+        .copy_dispose = true,
+        .signature = true,
+    };
+
+    var literal = raw.blocks.BlockLiteral{
+        .isa = raw.blocks._NSConcreteStackBlock,
+        .flags = @as(*const c_int, @ptrCast(&flags)).*,
+        .reserved = 0,
+        .invoke = &dummyInvoke,
+        .descriptor = &desc,
+    };
+
+    const copied = raw.blocks._Block_copy(@ptrCast(&literal));
+    try testing.expect(copied != null);
+    raw.blocks._Block_release(copied.?);
+}

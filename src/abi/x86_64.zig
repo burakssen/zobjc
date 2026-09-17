@@ -16,8 +16,13 @@ pub const class = @import("x86_64/class.zig");
 pub const eightbyte = @import("x86_64/eightbyte.zig");
 pub const merge = @import("x86_64/merge.zig");
 pub const aggregate = @import("x86_64/aggregate.zig");
+const testing = std.testing;
+const Object = @import("runtime").Object;
+const Class = @import("runtime").Class;
+const Selector = @import("runtime").Selector;
+const raw = @import("raw");
 
-// ponytail: Clear separation between scalar rules and structural aggregate classification.
+// Clear separation between scalar rules and structural aggregate classification.
 pub fn returnConvention(comptime target: Target, comptime T: type) ReturnConvention {
     _ = target;
     const cat = type_mod.categorize(T);
@@ -75,4 +80,55 @@ pub fn classifyReturn(comptime target: Target, comptime T: type) ABIResult {
             return .direct;
         },
     };
+}
+
+test "x86_64 scalar: void and integers use normal" {
+    const target = Target.macos_x86_64;
+    try testing.expectEqual(.normal, returnConvention(target, void));
+    try testing.expectEqual(.normal, returnConvention(target, bool));
+    try testing.expectEqual(.normal, returnConvention(target, i8));
+    try testing.expectEqual(.normal, returnConvention(target, u8));
+    try testing.expectEqual(.normal, returnConvention(target, i16));
+    try testing.expectEqual(.normal, returnConvention(target, u16));
+    try testing.expectEqual(.normal, returnConvention(target, i32));
+    try testing.expectEqual(.normal, returnConvention(target, u32));
+    try testing.expectEqual(.normal, returnConvention(target, i64));
+    try testing.expectEqual(.normal, returnConvention(target, u64));
+    try testing.expectEqual(.normal, returnConvention(target, isize));
+    try testing.expectEqual(.normal, returnConvention(target, usize));
+}
+
+test "x86_64 scalar: pointers and Objective-C handles use normal" {
+    const target = Target.macos_x86_64;
+    try testing.expectEqual(.normal, returnConvention(target, *anyopaque));
+    try testing.expectEqual(.normal, returnConvention(target, ?*anyopaque));
+    try testing.expectEqual(.normal, returnConvention(target, [*:0]const u8));
+    try testing.expectEqual(.normal, returnConvention(target, Object));
+    try testing.expectEqual(.normal, returnConvention(target, ?Object));
+    try testing.expectEqual(.normal, returnConvention(target, Class));
+    try testing.expectEqual(.normal, returnConvention(target, Selector));
+    try testing.expectEqual(.normal, returnConvention(target, raw.id));
+    try testing.expectEqual(.normal, returnConvention(target, raw.Class));
+    try testing.expectEqual(.normal, returnConvention(target, raw.SEL));
+}
+
+test "x86_64 scalar: f32 and f64 do NOT use fpret" {
+    const target = Target.macos_x86_64;
+    try testing.expectEqual(.normal, returnConvention(target, f32));
+    try testing.expectEqual(.normal, returnConvention(target, f64));
+    try testing.expectEqual(.direct, classifyReturn(target, f32));
+    try testing.expectEqual(.direct, classifyReturn(target, f64));
+}
+
+test "x86_64 scalar: long double uses fpret" {
+    const target = Target.macos_x86_64;
+    try testing.expectEqual(.fpret, returnConvention(target, c_longdouble));
+    try testing.expectEqual(.x87, classifyReturn(target, c_longdouble));
+}
+
+test "x86_64 scalar: complex long double uses fp2ret" {
+    const ComplexLongDouble = extern struct { real: c_longdouble, imag: c_longdouble };
+    const target = Target.macos_x86_64;
+    try testing.expectEqual(.fp2ret, returnConvention(target, ComplexLongDouble));
+    try testing.expectEqual(.complex_x87, classifyReturn(target, ComplexLongDouble));
 }

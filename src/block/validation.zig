@@ -2,7 +2,8 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
-const encoding = @import("../encoding/root.zig");
+const encoding = @import("encoding");
+const Object = @import("runtime").Object;
 
 /// Unwraps pointer-to-function or raw function type.
 pub fn unwrapFunctionType(comptime T: type) type {
@@ -86,4 +87,19 @@ test "validation: valid signatures" {
     validateBlockSignature(fn (c_int) void);
     validateBlockSignature(fn (c_int, f64) c_int);
     validateBlockSignature(fn () void);
+    validateBlockSignature(fn (Object) ?Object);
+}
+
+test "validation: ptrauth detection" {
+    const x86_target: std.Target = .{
+        .cpu = .{
+            .arch = .x86_64,
+            .model = &std.Target.x86.cpu.generic,
+            .features = std.Target.x86.featureSet(&.{}),
+        },
+        .os = .{ .tag = .macos, .version_range = .{ .semver = .{ .min = .{ .major = 14, .minor = 0, .patch = 0 }, .max = .{ .major = 14, .minor = 0, .patch = 0 } } } },
+        .abi = .none,
+        .ofmt = .macho,
+    };
+    try std.testing.expect(!isPtrauthTarget(x86_target));
 }

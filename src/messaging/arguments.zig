@@ -3,14 +3,15 @@
 //! Maps high-level Zig argument types and values to their low-level C ABI representations.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const runtime = @import("../runtime/root.zig");
+const testing = std.testing;
+const raw = @import("raw");
+const runtime = @import("runtime");
 const Object = runtime.Object;
 const Class = runtime.Class;
 const Selector = runtime.Selector;
 const Imp = runtime.Imp;
 
-// ponytail: Pure compile-time tuple and type mapping with zero runtime overhead.
+// Pure compile-time tuple and type mapping with zero runtime overhead.
 
 /// Determines whether `T` is a sentinel-terminated string literal or slice.
 pub fn isSentinelString(comptime T: type) bool {
@@ -127,4 +128,72 @@ pub inline fn normalizeTupleValues(args: anytype) NormalizeTupleTypes(@TypeOf(ar
         result[i] = toAbi(args[i]);
     }
     return result;
+}
+
+const TestEnum = enum(c_int) {
+    first = 10,
+    second = 20,
+};
+
+const Point = extern struct {
+    x: f64,
+    y: f64,
+};
+
+test "arguments: handle normalization to raw ABI types" {
+    try testing.expectEqual(raw.id, AbiArgumentType(Object));
+    try testing.expectEqual(raw.id, AbiArgumentType(?Object));
+    try testing.expectEqual(raw.Class, AbiArgumentType(Class));
+    try testing.expectEqual(raw.Class, AbiArgumentType(?Class));
+    try testing.expectEqual(raw.SEL, AbiArgumentType(Selector));
+    try testing.expectEqual(raw.SEL, AbiArgumentType(?Selector));
+    try testing.expectEqual(raw.IMP, AbiArgumentType(Imp));
+}
+
+test "arguments: enum normalization to tag type" {
+    try testing.expectEqual(c_int, AbiArgumentType(TestEnum));
+    try testing.expectEqual(@as(c_int, 20), toAbi(TestEnum.second));
+}
+
+test "arguments: string literal normalization to [*:0]const u8" {
+    const literal = "hello world";
+    try testing.expectEqual([*:0]const u8, AbiArgumentType(@TypeOf(literal)));
+
+    const raw_ptr = toAbi(literal);
+    try testing.expectEqualStrings("hello world", std.mem.span(raw_ptr));
+}
+
+test "arguments: extern struct remains unchanged" {
+    try testing.expectEqual(Point, AbiArgumentType(Point));
+    const pt = Point{ .x = 1.5, .y = 2.5 };
+    const abi_pt = toAbi(pt);
+    try testing.expectEqual(1.5, abi_pt.x);
+    try testing.expectEqual(2.5, abi_pt.y);
+}
+
+test "arguments: tuple normalization" {
+    const ArgsTuple = struct {
+        Object,
+        TestEnum,
+        *const [5:0]u8,
+        Point,
+    };
+    const Normalized = NormalizeTupleTypes(ArgsTuple);
+    const fields = @typeInfo(Normalized).@"struct".fields;
+
+    try testing.expectEqual(raw.id, fields[0].type);
+    try testing.expectEqual(c_int, fields[1].type);
+    try testing.expectEqual([*:0]const u8, fields[2].type);
+    try testing.expectEqual(Point, fields[3].type);
+}
+
+test "arguments: wrapper ABI decay" {
+    try testing.expectEqual(@sizeOf(Object), @sizeOf(raw.id));
+    try testing.expectEqual(@alignOf(Object), @alignOf(raw.id));
+
+    try testing.expectEqual(@sizeOf(Class), @sizeOf(raw.Class));
+    try testing.expectEqual(@alignOf(Class), @alignOf(raw.Class));
+
+    try testing.expectEqual(@sizeOf(Selector), @sizeOf(raw.SEL));
+    try testing.expectEqual(@alignOf(Selector), @alignOf(raw.SEL));
 }

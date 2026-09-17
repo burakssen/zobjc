@@ -3,13 +3,15 @@
 //! A non-owning, non-null handle to an Objective-C object instance (`id`).
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const conversion = @import("conversion.zig");
 const Class = @import("class.zig").Class;
 const Selector = @import("selector.zig").Selector;
 const sel_fn = @import("selector.zig").sel;
 const Ivar = @import("ivar.zig").Ivar;
-const memory = @import("../memory/root.zig");
+const memory = @import("memory");
 const association = @import("association.zig");
 const AssociationKey = association.AssociationKey;
 const AssociationPolicy = association.AssociationPolicy;
@@ -25,18 +27,8 @@ pub const Object = struct {
         selector: anytype,
         args: anytype,
     ) Return {
-        const messaging = @import("../messaging/root.zig");
+        const messaging = @import("messaging");
         return messaging.send(Return, self, selector, args);
-    }
-
-    /// Dispatches an Objective-C message to this object (backward compatibility alias).
-    pub inline fn msgSend(
-        self: Object,
-        comptime Return: type,
-        selector: anytype,
-        args: anytype,
-    ) Return {
-        return self.send(Return, selector, args);
     }
 
     /// Dispatches an Objective-C message to this object's superclass (Super2 semantics).
@@ -47,20 +39,8 @@ pub const Object = struct {
         selector: anytype,
         args: anytype,
     ) Return {
-        const messaging = @import("../messaging/root.zig");
+        const messaging = @import("messaging");
         return messaging.sendSuper(Return, self, current_class, selector, args);
-    }
-
-    /// Dispatches an Objective-C message to this object's superclass (backward compatibility alias).
-    pub inline fn msgSendSuper(
-        self: Object,
-        superclass: anytype,
-        comptime Return: type,
-        selector: anytype,
-        args: anytype,
-    ) Return {
-        const messaging = @import("../messaging/root.zig");
-        return messaging.sendSuperV1(Return, self, superclass, selector, args);
     }
 
     /// Converts a raw nullable `raw.id` into an optional `Object`.
@@ -106,11 +86,6 @@ pub const Object = struct {
         return Class.fromRawNonNull(cls_ptr);
     }
 
-    /// Legacy alias for class().
-    pub inline fn getClass(self: Object) ?Class {
-        return Class.fromRaw(raw.runtime.object_getClass(self.ptr));
-    }
-
     /// Sets the class of the object, returning the previous class.
     pub inline fn setClass(self: Object, new_class: Class) Class {
         const old_cls = raw.runtime.object_setClass(self.ptr, new_class.ptr) orelse unreachable;
@@ -120,11 +95,6 @@ pub const Object = struct {
     /// Returns the class name of the object.
     pub inline fn className(self: Object) [:0]const u8 {
         return conversion.spanCString(raw.objc.object_getClassName(self.ptr));
-    }
-
-    /// Legacy alias for className().
-    pub inline fn getClassName(self: Object) [:0]const u8 {
-        return self.className();
     }
 
     /// Returns whether this object is a class object.
@@ -153,12 +123,12 @@ pub const Object = struct {
         return self.ptr == other.ptr;
     }
 
-    /// Set a property. This is a helper around getProperty and is
+    /// Set a property. This is a helper around `Class.property` and is
     /// strictly less performant than doing it manually.
     pub fn setProperty(self: Object, comptime n: [:0]const u8, v: anytype) void {
         const cls = self.class();
         const setter = setter: {
-            if (cls.getProperty(n)) |prop| {
+            if (cls.property(n)) |prop| {
                 if (prop.copyAttributeValue("S")) |val| {
                     var owned = val;
                     defer owned.deinit();
@@ -174,15 +144,15 @@ pub const Object = struct {
             );
         };
 
-        self.msgSend(void, setter, .{v});
+        self.send(void, setter, .{v});
     }
 
-    /// Get a property. This is a helper around Class.getProperty and is
+    /// Get a property. This is a helper around `Class.property` and is
     /// strictly less performant than doing it manually.
     pub fn getProperty(self: Object, comptime T: type, comptime n: [:0]const u8) T {
         const cls = self.class();
         const getter = getter: {
-            if (cls.getProperty(n)) |prop| {
+            if (cls.property(n)) |prop| {
                 if (prop.copyAttributeValue("G")) |val| {
                     var owned = val;
                     defer owned.deinit();
@@ -193,7 +163,7 @@ pub const Object = struct {
             break :getter sel_fn(n);
         };
 
-        return self.msgSend(T, getter, .{});
+        return self.send(T, getter, .{});
     }
 
     /// Sets an associated value for this object using a given key and association policy.
@@ -232,21 +202,16 @@ pub const Object = struct {
 
     /// Copies object memory with extra bytes.
     ///
-    /// ADVANCED: Preferred high-level entry point is `objc.advanced.copyObjectMemory`.
+    /// Prefer the owned high-level runtime APIs for object memory management.
     pub inline fn copyObjectMemory(self: Object, extra_bytes: usize) ?Object {
         return Object.fromRaw(raw.runtime.object_copy(self.ptr, extra_bytes));
     }
 
     /// Disposes object memory directly via runtime without dealloc message dispatch.
     ///
-    /// ADVANCED: Preferred high-level entry point is `objc.advanced.disposeObjectMemory`.
+    /// Releases the runtime-owned object memory.
     pub inline fn disposeObjectMemory(self: Object) void {
         _ = raw.runtime.object_dispose(self.ptr);
-    }
-
-    /// Deprecated alias for `disposeObjectMemory()`.
-    pub inline fn dispose(self: Object) void {
-        self.disposeObjectMemory();
     }
 
     /// Reads an instance variable value by name.
@@ -261,24 +226,81 @@ pub const Object = struct {
         raw.runtime.object_setIvar(self.ptr, ivar, val.ptr);
     }
 
-    /// Retains the object reference via runtime `objc_retain`.
-    ///
-    /// DEPRECATED: Non-owning `Object` handles do not hold ownership obligations.
-    /// Prefer `objc.Retained(Object).retain(self)` or `objc.Retained(Object).adopt(self)`.
-    pub fn retain(self: Object) Object {
-        return Object.fromRawNonNull(raw.compiler_runtime.objc_retain(self.ptr).?);
-    }
-
-    /// Releases the object reference via runtime `objc_release`.
-    ///
-    /// DEPRECATED: Non-owning `Object` handles do not hold ownership obligations.
-    /// Prefer managing object lifetime via `objc.Retained(Object)`.
-    pub fn release(self: Object) void {
-        raw.compiler_runtime.objc_release(self.ptr);
-    }
-
     comptime {
         std.debug.assert(@sizeOf(@This()) == @sizeOf(raw.id));
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.id));
     }
 };
+
+test "object: instance class and identity" {
+    const cls = objc.requireClass("NSObject");
+    const obj1 = cls.send(Object, "alloc", .{})
+        .send(Object, "init", .{});
+    defer obj1.send(void, "dealloc", .{});
+
+    const obj2 = cls.send(Object, "alloc", .{})
+        .send(Object, "init", .{});
+    defer obj2.send(void, "dealloc", .{});
+
+    try testing.expect(obj1.class().eql(cls));
+    try testing.expectEqualStrings("NSObject", obj1.className());
+    try testing.expect(!obj1.isClass());
+    try testing.expect(obj1.eql(obj1));
+    try testing.expect(!obj1.eql(obj2));
+}
+
+test "object: setClass dynamic isa swizzling" {
+    const Base = objc.requireClass("NSObject");
+    const Subclass = objc.allocateClassPair(Base, "ObjectSetClassSubclass").?;
+    objc.registerClassPair(Subclass);
+    defer objc.disposeClassPair(Subclass);
+
+    const obj = Base.send(Object, "alloc", .{})
+        .send(Object, "init", .{});
+    defer obj.send(void, "dealloc", .{});
+
+    try testing.expect(obj.class().eql(Base));
+    const old_cls = obj.setClass(Subclass);
+    try testing.expect(old_cls.eql(Base));
+    try testing.expect(obj.class().eql(Subclass));
+    _ = obj.setClass(Base);
+}
+
+test "object: getIvar and setIvar" {
+    const Base = objc.requireClass("NSObject");
+    const Subclass = objc.allocateClassPair(Base, "ObjectIvarTestClass").?;
+    _ = Subclass.addIvar("_child", @sizeOf(raw.id), @truncate(std.math.log2(@alignOf(raw.id))), "@");
+    objc.registerClassPair(Subclass);
+    defer objc.disposeClassPair(Subclass);
+
+    const ivar = Subclass.instanceIvar("_child").?;
+    const parent = Subclass.send(Object, "alloc", .{})
+        .send(Object, "init", .{});
+    defer parent.send(void, "dealloc", .{});
+    const child = Base.send(Object, "alloc", .{})
+        .send(Object, "init", .{});
+    defer child.send(void, "dealloc", .{});
+
+    try testing.expectEqual(@as(?Object, null), parent.getIvar(ivar));
+    parent.setIvar(ivar, child);
+    try testing.expectEqual(child.ptr, parent.getIvar(ivar).?.ptr);
+    parent.setIvar(ivar, null);
+    try testing.expectEqual(@as(?Object, null), parent.getIvar(ivar));
+}
+
+test "conversion: Object fromRaw and toRaw roundtrip" {
+    const cls = objc.requireClass("NSObject");
+    const obj = cls.send(Object, "alloc", .{}).send(Object, "init", .{});
+    defer obj.send(void, "dealloc", .{});
+
+    const raw_id = obj.toRaw();
+    try testing.expect(raw_id != null);
+    try testing.expect(obj.eql(Object.fromRaw(raw_id).?));
+    try testing.expect(obj.eql(Object.fromRawNonNull(raw_id.?)));
+    try testing.expectEqual(@as(?Object, null), Object.fromRaw(null));
+}
+
+test "handle: Object is pointer-sized and pointer-aligned" {
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Object));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Object));
+}

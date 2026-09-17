@@ -7,9 +7,9 @@
 //! omits the `_cmd` selector argument: its signature is `^(self, args...)`.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const Object = @import("../runtime/object.zig").Object;
-const Imp = @import("../runtime/imp.zig").Imp;
+const raw = @import("raw");
+const Object = @import("runtime").Object;
+const Imp = @import("runtime").Imp;
 
 /// Owning handle for an Objective-C IMP created via `imp_implementationWithBlock`.
 pub const OwnedImp = struct {
@@ -65,7 +65,7 @@ pub fn MethodBlock(comptime MethodFn: type) type {
 }
 
 test "MethodBlock signature transformation" {
-    const Selector = @import("../runtime/selector.zig").Selector;
+    const Selector = @import("runtime").Selector;
     const MethodSig = fn (Object, Selector, c_int, f64) c_int;
     const ExpectedBlockSig = fn (Object, c_int, f64) c_int;
 

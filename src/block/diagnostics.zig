@@ -1,7 +1,7 @@
 //! Block introspection and diagnostics utilities.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 
 /// Checks if a Block is a statically allocated global Block.
 pub fn isGlobal(block_ptr: *const raw.blocks.Block_layout) bool {

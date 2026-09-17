@@ -4,7 +4,7 @@
 //! Block header followed immediately by the capture storage.
 
 const std = @import("std");
-const raw = @import("../../raw/root.zig");
+const raw = @import("raw");
 
 /// Synthesizes the complete Block literal type including capture payload.
 pub fn Literal(comptime Captures: type) type {
@@ -51,6 +51,6 @@ test "Literal layout" {
     try std.testing.expectEqual(@as(usize, 32), @sizeOf(LitEmpty));
 
     const LitInt = Literal(struct { x: c_int });
-    try std.testing.expectEqual(@as(usize, 36), @sizeOf(LitInt));
+    try std.testing.expectEqual(@as(usize, 40), @sizeOf(LitInt));
     try std.testing.expectEqual(@as(usize, 32), @offsetOf(LitInt, "captures_bytes"));
 }

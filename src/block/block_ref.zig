@@ -4,7 +4,7 @@
 //! _Block_object_assign / _Block_object_dispose with BLOCK_FIELD_IS_BLOCK.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 
 pub fn BlockRef(comptime Signature: type) type {
     return struct {

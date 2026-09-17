@@ -5,16 +5,17 @@
 //! - `encode(allocator, qualified)`: Runtime AST serializer into heap-allocated C string.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 const types = @import("type.zig");
 const QualifiedType = types.QualifiedType;
 const Type = types.Type;
 const Scalar = types.Scalar;
 const Qualifiers = types.Qualifiers;
 const zig_type = @import("zig_type.zig");
-const Object = @import("../runtime/object.zig").Object;
-const Class = @import("../runtime/class.zig").Class;
-const Selector = @import("../runtime/selector.zig").Selector;
+const Object = @import("runtime").Object;
+const Class = @import("runtime").Class;
+const Selector = @import("runtime").Selector;
+const testing = std.testing;
 
 // --- Compile-Time Encoder ---
 
@@ -526,4 +527,231 @@ fn writeTypeAST(allocator: std.mem.Allocator, list: *std.ArrayList(u8), type_val
             try writeQualified(allocator, list, at.child.*);
         },
     }
+}
+
+fn expectEncoding(comptime T: type, expected: []const u8) !void {
+    const enc = comptime comptimeEncode(T);
+    try testing.expectEqualStrings(expected, &enc);
+}
+
+test "primitive: integer types" {
+    try expectEncoding(c_char, "c");
+    try expectEncoding(i8, "c");
+    try expectEncoding(u8, "C");
+    try expectEncoding(c_short, "s");
+    try expectEncoding(i16, "s");
+    try expectEncoding(c_ushort, "S");
+    try expectEncoding(u16, "S");
+    try expectEncoding(c_int, "i");
+    try expectEncoding(i32, "i");
+    try expectEncoding(c_uint, "I");
+    try expectEncoding(u32, "I");
+    const expected_long = if (@sizeOf(c_long) == 8) "q" else "l";
+    const expected_ulong = if (@sizeOf(c_ulong) == 8) "Q" else "L";
+    try expectEncoding(c_long, expected_long);
+    try expectEncoding(c_ulong, expected_ulong);
+    try expectEncoding(c_longlong, "q");
+    try expectEncoding(i64, "q");
+    try expectEncoding(c_ulonglong, "Q");
+    try expectEncoding(u64, "Q");
+}
+
+test "primitive: floating point types" {
+    try expectEncoding(f32, "f");
+    try expectEncoding(f64, "d");
+    try expectEncoding(c_longdouble, "D");
+}
+
+test "primitive: boolean types" {
+    try expectEncoding(bool, "B");
+    const expected_bool = if (raw.objc_bool_is_bool) "B" else "c";
+    try expectEncoding(raw.BOOL, expected_bool);
+}
+
+test "primitive: void and C strings" {
+    try expectEncoding(void, "v");
+    try expectEncoding([*c]const u8, "r*");
+    try expectEncoding([*c]u8, "*");
+    try expectEncoding([*:0]const u8, "r*");
+    try expectEncoding([*:0]u8, "*");
+    try expectEncoding(?[*:0]const u8, "r*");
+    try expectEncoding(?[*:0]u8, "*");
+}
+
+test "primitive: Objective-C runtime handles" {
+    try expectEncoding(Object, "@");
+    try expectEncoding(?Object, "@");
+    try expectEncoding(Class, "#");
+    try expectEncoding(?Class, "#");
+    try expectEncoding(Selector, ":");
+    try expectEncoding(?Selector, ":");
+    try expectEncoding(raw.id, "@");
+    try expectEncoding(raw.Class, "#");
+    try expectEncoding(raw.SEL, ":");
+}
+
+test "primitive: pointers and arrays" {
+    try expectEncoding(*i32, "^i");
+    try expectEncoding(**i32, "^^i");
+    try expectEncoding(?*i32, "^i");
+    try expectEncoding(*anyopaque, "^v");
+    try expectEncoding(?*anyopaque, "^v");
+    try expectEncoding([4]i32, "[4i]");
+    try expectEncoding([16]f32, "[16f]");
+    try expectEncoding([2][3]i32, "[2[3i]]");
+}
+
+test "primitive: enums encode as their backing integer" {
+    const EnumShort = enum(c_short) { first, second };
+    const EnumInt = enum(c_int) { a, b, c };
+    const EnumU64 = enum(u64) { x, y };
+    try expectEncoding(EnumShort, "s");
+    try expectEncoding(EnumInt, "i");
+    try expectEncoding(EnumU64, "Q");
+}
+
+test "primitive: type validation predicates" {
+    try testing.expect(zig_type.isObjCEncodable(i32));
+    try testing.expect(zig_type.isObjCEncodable(f64));
+    try testing.expect(zig_type.isObjCEncodable(Object));
+    try testing.expect(zig_type.isObjCEncodable(*i32));
+    try testing.expect(zig_type.isObjCEncodable([4]i32));
+    try testing.expect(!zig_type.isObjCEncodable([]const u8));
+    try testing.expect(!zig_type.isObjCEncodable(anyerror!i32));
+}
+
+test "aggregate: structs and unions" {
+    const Point = extern struct { x: f64, y: f64 };
+    const CustomPoint = extern struct {
+        pub const objc_encoding_name = "CGPoint";
+        x: f64,
+        y: f64,
+    };
+    const OpaqueType = extern struct {
+        pub const objc_type_encoding = "{OpaqueSpecial}";
+        unused: usize,
+    };
+    const Inner = extern struct { val: i32 };
+    const Outer = extern struct { inner: Inner, flag: bool };
+    const ValueUnion = extern union {
+        pub const objc_encoding_name = "U1";
+        i: i32,
+        f: f32,
+    };
+
+    try expectEncoding(Point, "{Point=dd}");
+    try expectEncoding(CustomPoint, "{CGPoint=dd}");
+    try expectEncoding(OpaqueType, "{OpaqueSpecial}");
+    try expectEncoding(Outer, "{Outer={Inner=i}B}");
+    try expectEncoding(ValueUnion, "(U1=if)");
+}
+
+test "aggregate: pointer indirection and validation" {
+    const Point = extern struct {
+        pub const objc_encoding_name = "CGPoint";
+        x: f64,
+        y: f64,
+    };
+    const ZigStruct = struct { a: i32 };
+    const PackedStruct = packed struct { a: u8 };
+    const TaggedUnion = union(enum) { a: i32, b: f32 };
+
+    try expectEncoding(*Point, "^{CGPoint=dd}");
+    try expectEncoding(**Point, "^^{CGPoint}");
+    try expectEncoding(***Point, "^^^{CGPoint}");
+    try testing.expect(!zig_type.isObjCEncodable(ZigStruct));
+    try testing.expect(!zig_type.isObjCEncodable(PackedStruct));
+    try testing.expect(!zig_type.isObjCEncodable(TaggedUnion));
+}
+
+test "encoder: function types" {
+    const F = fn (raw.id, raw.SEL, i32) callconv(.c) i32;
+    try expectEncoding(F, "i@:i");
+}
+
+extern fn fixture_encode_char() [*:0]const u8;
+extern fn fixture_encode_uchar() [*:0]const u8;
+extern fn fixture_encode_short() [*:0]const u8;
+extern fn fixture_encode_ushort() [*:0]const u8;
+extern fn fixture_encode_int() [*:0]const u8;
+extern fn fixture_encode_uint() [*:0]const u8;
+extern fn fixture_encode_long() [*:0]const u8;
+extern fn fixture_encode_ulong() [*:0]const u8;
+extern fn fixture_encode_longlong() [*:0]const u8;
+extern fn fixture_encode_ulonglong() [*:0]const u8;
+extern fn fixture_encode_float() [*:0]const u8;
+extern fn fixture_encode_double() [*:0]const u8;
+extern fn fixture_encode_long_double() [*:0]const u8;
+extern fn fixture_encode_bool() [*:0]const u8;
+extern fn fixture_encode_c99_bool() [*:0]const u8;
+extern fn fixture_encode_void() [*:0]const u8;
+extern fn fixture_encode_char_ptr() [*:0]const u8;
+extern fn fixture_encode_const_char_ptr() [*:0]const u8;
+extern fn fixture_encode_void_ptr() [*:0]const u8;
+extern fn fixture_encode_id() [*:0]const u8;
+extern fn fixture_encode_class() [*:0]const u8;
+extern fn fixture_encode_sel() [*:0]const u8;
+extern fn fixture_encode_int_ptr() [*:0]const u8;
+extern fn fixture_encode_int_ptr_ptr() [*:0]const u8;
+extern fn fixture_encode_int_array_4() [*:0]const u8;
+extern fn fixture_encode_float_array_16() [*:0]const u8;
+extern fn fixture_encode_matrix_4_4() [*:0]const u8;
+extern fn fixture_encode_struct_s1() [*:0]const u8;
+extern fn fixture_encode_struct_cgpoint() [*:0]const u8;
+extern fn fixture_encode_union_u1() [*:0]const u8;
+extern fn fixture_encode_struct_nested() [*:0]const u8;
+extern fn fixture_encode_struct_s1_ptr() [*:0]const u8;
+extern fn fixture_encode_struct_s1_ptr_ptr() [*:0]const u8;
+
+const S1 = extern struct { x: c_int };
+const CGPoint = extern struct { x: f64, y: f64 };
+const U1 = extern union { i: c_int, f: f32 };
+const Nested = extern struct { point: CGPoint, flags: c_int };
+
+fn checkDifferential(comptime T: type, fixture_fn: *const fn () callconv(.c) [*:0]const u8) !void {
+    const expected = std.mem.span(fixture_fn());
+    const actual = comptime comptimeEncode(T);
+    try testing.expectEqualStrings(expected, &actual);
+}
+
+test "differential: encodings match Clang fixtures" {
+    try checkDifferential(c_char, fixture_encode_char);
+    try checkDifferential(u8, fixture_encode_uchar);
+    try checkDifferential(c_short, fixture_encode_short);
+    try checkDifferential(c_ushort, fixture_encode_ushort);
+    try checkDifferential(c_int, fixture_encode_int);
+    try checkDifferential(c_uint, fixture_encode_uint);
+    try checkDifferential(c_long, fixture_encode_long);
+    try checkDifferential(c_ulong, fixture_encode_ulong);
+    try checkDifferential(c_longlong, fixture_encode_longlong);
+    try checkDifferential(c_ulonglong, fixture_encode_ulonglong);
+    try checkDifferential(f32, fixture_encode_float);
+    try checkDifferential(f64, fixture_encode_double);
+    try checkDifferential(c_longdouble, fixture_encode_long_double);
+    try checkDifferential(raw.BOOL, fixture_encode_bool);
+    try checkDifferential(bool, fixture_encode_c99_bool);
+    try checkDifferential(void, fixture_encode_void);
+    try checkDifferential([*c]u8, fixture_encode_char_ptr);
+    try checkDifferential([*c]const u8, fixture_encode_const_char_ptr);
+    try checkDifferential(*anyopaque, fixture_encode_void_ptr);
+    try checkDifferential(Object, fixture_encode_id);
+    try checkDifferential(Class, fixture_encode_class);
+    try checkDifferential(Selector, fixture_encode_sel);
+    try checkDifferential(S1, fixture_encode_struct_s1);
+    try checkDifferential(CGPoint, fixture_encode_struct_cgpoint);
+    try checkDifferential(U1, fixture_encode_union_u1);
+    try checkDifferential(Nested, fixture_encode_struct_nested);
+}
+
+test "differential: pointers and arrays match Clang fixtures" {
+    try checkDifferential(*c_int, fixture_encode_int_ptr);
+    try checkDifferential(**c_int, fixture_encode_int_ptr_ptr);
+    try checkDifferential([4]c_int, fixture_encode_int_array_4);
+    try checkDifferential([16]f32, fixture_encode_float_array_16);
+    try checkDifferential([4][4]c_int, fixture_encode_matrix_4_4);
+}
+
+test "differential: aggregate pointers match Clang fixtures" {
+    try checkDifferential(*S1, fixture_encode_struct_s1_ptr);
+    try checkDifferential(**S1, fixture_encode_struct_s1_ptr_ptr);
 }

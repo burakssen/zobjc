@@ -4,7 +4,7 @@
 
 const std = @import("std");
 
-// ponytail: Confine all untyped pointer casts to this single file.
+// Confine all untyped pointer casts to this single file.
 
 /// Casts untyped runtime messenger `fn_ptr` to exact typed function pointer `*const Fn` and invokes it.
 pub inline fn call(comptime Fn: type, fn_ptr: *const anyopaque, call_args: anytype) @typeInfo(Fn).@"fn".return_type.? {

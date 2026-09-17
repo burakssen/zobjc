@@ -1,10 +1,10 @@
 //! Internal conversion helpers between typed runtime handles and raw C pointers.
 //!
-//! ponytail: Centralized minimal conversion helpers to avoid repeating std.mem.span
+//! Centralized minimal conversion helpers to avoid repeating std.mem.span
 //! and pointer unwrapping across runtime wrappers.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 
 /// Converts a non-null sentinel-terminated C string into a Zig sentinel-terminated slice.
 pub inline fn spanCString(ptr: [*:0]const u8) [:0]const u8 {

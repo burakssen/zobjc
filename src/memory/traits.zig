@@ -1,8 +1,8 @@
 //! Compile-time traits for retainable Objective-C objects.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const Object = @import("../runtime/object.zig").Object;
+const raw = @import("raw");
+const Object = @import("runtime").Object;
 
 /// Determines whether T is a retainable Objective-C object type.
 ///

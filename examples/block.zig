@@ -1,7 +1,7 @@
 //! Example demonstrating modern Objective-C Block creation, captures, ByRef mutation, and execution.
 
 const std = @import("std");
-const objc = @import("objc");
+const objc = @import("zobjc");
 
 pub fn main() !void {
     std.debug.print("=== Modern Objective-C Blocks in zobjc ===\n", .{});
@@ -68,8 +68,8 @@ pub fn main() !void {
     defer greet_imp.deinit();
 
     const NSObject = objc.requireClass("NSObject");
-    const obj = NSObject.msgSend(objc.Object, "alloc", .{}).msgSend(objc.Object, "init", .{});
-    defer obj.msgSend(void, "dealloc", .{});
+    const obj = NSObject.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
+    defer obj.send(void, "dealloc", .{});
 
     const imp_res = objc.callImp(c_int, greet_imp.borrow(), obj, objc.sel("test"), .{});
     std.debug.print("4. Block-to-IMP invocation result = {} (expected 42)\n", .{imp_res});

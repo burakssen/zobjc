@@ -3,7 +3,9 @@
 //! A non-owning, non-null handle to an Objective-C class (`Class`).
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const conversion = @import("conversion.zig");
 const Selector = @import("selector.zig").Selector;
 const sel_fn = @import("selector.zig").sel;
@@ -14,7 +16,7 @@ const PropertyAttribute = @import("property_attribute.zig").PropertyAttribute;
 const Protocol = @import("protocol.zig").Protocol;
 const Imp = @import("imp.zig").Imp;
 const Object = @import("object.zig").Object;
-const memory = @import("../memory/root.zig");
+const memory = @import("memory");
 
 pub const Class = struct {
     ptr: *raw.objc_class,
@@ -26,18 +28,8 @@ pub const Class = struct {
         selector: anytype,
         args: anytype,
     ) Return {
-        const messaging = @import("../messaging/root.zig");
+        const messaging = @import("messaging");
         return messaging.send(Return, self, selector, args);
-    }
-
-    /// Dispatches an Objective-C class message to this class (backward compatibility alias).
-    pub inline fn msgSend(
-        self: Class,
-        comptime Return: type,
-        selector: anytype,
-        args: anytype,
-    ) Return {
-        return self.send(Return, selector, args);
     }
 
     /// Converts a raw nullable `raw.Class` into an optional `Class`.
@@ -59,11 +51,6 @@ pub const Class = struct {
     /// Returns the name of the class.
     pub inline fn name(self: Class) [:0]const u8 {
         return conversion.spanCString(raw.runtime.class_getName(self.ptr));
-    }
-
-    /// Alias for name() to match Method, Ivar, Property, Protocol parity.
-    pub inline fn getName(self: Class) [:0]const u8 {
-        return self.name();
     }
 
     /// Returns whether this class is a metaclass.
@@ -286,43 +273,193 @@ pub const Class = struct {
         );
     }
 
-    // --- Backward Compatibility Aliases ---
-
-    /// Legacy alias for property.
-    pub inline fn getProperty(self: Class, prop_name: [:0]const u8) ?Property {
-        return self.property(prop_name);
-    }
-
-    /// Legacy alias for respondsTo.
-    pub inline fn respondsToSelector(self: Class, sel_val: Selector) bool {
-        return self.respondsTo(sel_val);
-    }
-
-    /// Legacy alias for conformsTo.
-    pub inline fn conformsToProtocol(self: Class, proto: Protocol) bool {
-        return self.conformsTo(proto);
-    }
-
-    /// Legacy property list copy (must be freed with objc.free).
-    pub fn copyPropertyList(self: Class) []Property {
-        var count: c_uint = undefined;
-        const list = raw.runtime.class_copyPropertyList(self.ptr, &count) orelse return &.{};
-        if (count == 0) return &.{};
-        const typed_list: [*]Property = @ptrCast(list);
-        return typed_list[0..count];
-    }
-
-    /// Legacy protocol list copy (must be freed with objc.free).
-    pub fn copyProtocolList(self: Class) []Protocol {
-        var count: c_uint = undefined;
-        const list = raw.runtime.class_copyProtocolList(self.ptr, &count) orelse return &.{};
-        if (count == 0) return &.{};
-        const typed_list: [*]Protocol = @ptrCast(list);
-        return typed_list[0..count];
-    }
-
     comptime {
         std.debug.assert(@sizeOf(@This()) == @sizeOf(raw.Class));
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.Class));
     }
 };
+
+test "class: NSObject introspection" {
+    const cls = objc.requireClass("NSObject");
+
+    try testing.expectEqualStrings("NSObject", cls.name());
+    try testing.expect(!cls.isMetaClass());
+    try testing.expectEqual(@as(?objc.Class, null), cls.superclass());
+    try testing.expect(cls.instanceSize() >= @sizeOf(usize));
+
+    const v = cls.version();
+    cls.setVersion(v + 1);
+    try testing.expectEqual(v + 1, cls.version());
+    cls.setVersion(v);
+
+    const init_sel = objc.sel("init");
+    try testing.expect(cls.respondsTo(init_sel));
+    try testing.expect(cls.instanceMethod(init_sel) != null);
+    try testing.expect(cls.methodImplementation(init_sel) != null);
+    try testing.expect(cls.classMethod(objc.sel("alloc")) != null);
+
+    if (objc.getProtocol("NSObject")) |proto| {
+        try testing.expect(cls.conformsTo(proto));
+    }
+    if (cls.imageName()) |img| {
+        try testing.expect(img.len > 0);
+    }
+
+    const cls_again = objc.getClass("NSObject").?;
+    try testing.expect(cls.eql(cls_again));
+    try testing.expect(cls.hash() == cls_again.hash());
+}
+
+test "class: subclass superclass hierarchy" {
+    const fixture_cls = objc.requireClass("ABIFixture");
+    const super_cls = fixture_cls.superclass();
+    try testing.expect(super_cls != null);
+    try testing.expectEqualStrings("NSObject", super_cls.?.name());
+}
+
+test "class: createInstance creates non-null object" {
+    const cls = objc.requireClass("NSObject");
+    const inst = cls.createInstance(0);
+    try testing.expect(inst != null);
+    defer inst.?.disposeObjectMemory();
+
+    try testing.expect(inst.?.class().eql(cls));
+}
+
+test "hierarchy introspection: isSubclassOf and isStrictSubclassOf" {
+    const NSObject = objc.requireClass("NSObject");
+    const FixtureCls = objc.requireClass("ABIFixture");
+
+    try testing.expect(NSObject.isSubclassOf(NSObject));
+    try testing.expect(!NSObject.isStrictSubclassOf(NSObject));
+    try testing.expect(FixtureCls.isSubclassOf(NSObject));
+    try testing.expect(FixtureCls.isStrictSubclassOf(NSObject));
+    try testing.expect(!NSObject.isSubclassOf(FixtureCls));
+    try testing.expect(!NSObject.isStrictSubclassOf(FixtureCls));
+}
+
+test "runtime: property introspection" {
+    const Tracker = objc.getClass("DeallocTracker").?;
+    const prop = Tracker.property("identifier");
+    try testing.expect(prop != null);
+    try testing.expectEqualStrings("identifier", prop.?.name());
+
+    try testing.expect(Tracker.property("nonExistentPropertyXYZ") == null);
+
+    var prop_list = Tracker.properties();
+    defer prop_list.deinit();
+    try testing.expect(prop_list.count() > 0);
+}
+
+test "runtime: subclass creation, method replacement, and ivar addition" {
+    const NSObject = objc.getClass("NSObject").?;
+    var dynamic_class = objc.allocateClassPair(NSObject, "DynamicTestClass").?;
+    try testing.expect(dynamic_class.addIvar(
+        "custom_ivar",
+        @sizeOf(objc.raw.id),
+        @truncate(std.math.log2(@alignOf(objc.raw.id))),
+        "@",
+    ));
+
+    _ = dynamic_class.replaceMethod(objc.sel("hash"), objc.Imp.fromRawNonNull(@ptrCast(&struct {
+        fn inner(target: objc.raw.id, sel_val: objc.raw.SEL) callconv(.c) u64 {
+            _ = target;
+            _ = sel_val;
+            return 42;
+        }
+    }.inner)), "Q@:");
+
+    try testing.expect(dynamic_class.addMethod(objc.sel("multiplyByTwo:"), objc.Imp.fromRawNonNull(@ptrCast(&struct {
+        fn imp(target: objc.raw.id, sel_val: objc.raw.SEL, val: i32) callconv(.c) i32 {
+            _ = target;
+            _ = sel_val;
+            return val * 2;
+        }
+    }.imp)), "i@:i"));
+
+    objc.registerClassPair(dynamic_class);
+    defer objc.disposeClassPair(dynamic_class);
+
+    const instance = dynamic_class.send(objc.Object, "alloc", .{})
+        .send(objc.Object, "init", .{});
+    defer instance.send(void, "dealloc", .{});
+
+    try testing.expectEqual(@as(u64, 42), instance.send(u64, "hash", .{}));
+    try testing.expectEqual(@as(i32, 42), instance.send(i32, "multiplyByTwo:", .{@as(i32, 21)}));
+
+    const val_obj = NSObject.send(objc.Object, "new", .{});
+    defer val_obj.send(void, "release", .{});
+    instance.setInstanceVariable("custom_ivar", val_obj);
+    try testing.expect(instance.getInstanceVariable("custom_ivar").?.eql(val_obj));
+}
+
+test "mutation: dynamic class creation, methods, ivars, protocols, and properties" {
+    const NSObject = objc.requireClass("NSObject");
+    const DynClass = objc.allocateClassPair(NSObject, "DynamicMutationFullTest").?;
+
+    try testing.expect(DynClass.addIvar(
+        "counter",
+        @sizeOf(i64),
+        @truncate(std.math.log2(@alignOf(i64))),
+        "q",
+    ));
+
+    const add_fn = struct {
+        fn add(target: objc.raw.id, sel_val: objc.raw.SEL, a: i32, b: i32) callconv(.c) i32 {
+            _ = target;
+            _ = sel_val;
+            return a + b;
+        }
+    }.add;
+    const add_sel = objc.sel("add:and:");
+    try testing.expect(DynClass.addMethod(add_sel, objc.Imp.fromRawNonNull(@ptrCast(&add_fn)), "i@:ii"));
+
+    if (objc.getProtocol("NSObject")) |proto| {
+        try testing.expect(DynClass.addProtocol(proto));
+    }
+
+    const attrs = [_]objc.PropertyAttribute{
+        .{ .name = "T", .value = "q" },
+        .{ .name = "V", .value = "counter" },
+    };
+    try testing.expect(DynClass.addProperty("counter", &attrs));
+
+    objc.registerClassPair(DynClass);
+    defer objc.disposeClassPair(DynClass);
+
+    const new_add_fn = struct {
+        fn new_add(target: objc.raw.id, sel_val: objc.raw.SEL, a: i32, b: i32) callconv(.c) i32 {
+            _ = target;
+            _ = sel_val;
+            return (a + b) * 10;
+        }
+    }.new_add;
+    try testing.expect(DynClass.replaceMethod(add_sel, objc.Imp.fromRawNonNull(@ptrCast(&new_add_fn)), "i@:ii") != null);
+
+    const inst = DynClass.send(objc.Object, "alloc", .{})
+        .send(objc.Object, "init", .{});
+    defer inst.send(void, "dealloc", .{});
+    try testing.expectEqual(@as(i32, 50), inst.send(i32, add_sel, .{ @as(i32, 2), @as(i32, 3) }));
+
+    if (objc.getProtocol("NSObject")) |proto| {
+        try testing.expect(DynClass.conformsTo(proto));
+    }
+    const prop = DynClass.property("counter");
+    try testing.expect(prop != null);
+    try testing.expectEqualStrings("counter", prop.?.name());
+}
+
+test "conversion: Class fromRaw and toRaw roundtrip" {
+    const raw_cls = raw.runtime.objc_getClass("NSObject");
+    try testing.expect(raw_cls != null);
+
+    const cls = Class.fromRaw(raw_cls).?;
+    try testing.expectEqual(raw_cls, cls.toRaw());
+    try testing.expectEqual(raw_cls, Class.fromRawNonNull(raw_cls.?).toRaw());
+    try testing.expectEqual(@as(?Class, null), Class.fromRaw(null));
+}
+
+test "handle: Class is pointer-sized and pointer-aligned" {
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Class));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Class));
+}

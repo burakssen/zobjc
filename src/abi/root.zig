@@ -32,3 +32,7 @@ pub const returnInfo = classify.returnInfo;
 // Sub-architecture access for advanced testing/inspection
 pub const aarch64 = @import("aarch64.zig");
 pub const x86_64 = @import("x86_64.zig");
+
+test {
+    @import("std").testing.refAllDecls(@This());
+}

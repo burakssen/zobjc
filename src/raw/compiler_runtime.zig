@@ -4,6 +4,9 @@
 //! reference counting, weak-reference management, and autorelease pool operations.
 
 const types = @import("types.zig");
+const std = @import("std");
+const testing = std.testing;
+const raw = @import("zobjc").raw;
 const id = types.id;
 const Class = types.Class;
 
@@ -92,3 +95,75 @@ pub extern "c" fn objc_addExceptionHandler(fn_ptr: objc_exception_handler, conte
 
 /// Removes an exception handler from the thread exception list (macOS only).
 pub extern "c" fn objc_removeExceptionHandler(token: usize) void;
+
+test "raw.compiler_runtime: retain and release lifecycle" {
+    const cls = raw.runtime.objc_getClass("NSObject");
+    try testing.expect(cls != null);
+
+    const sel_alloc = raw.objc.sel_registerName("alloc");
+    const sel_init = raw.objc.sel_registerName("init");
+
+    const AllocFn = *const fn (raw.Class, raw.SEL) callconv(.c) raw.id;
+    const InitFn = *const fn (raw.id, raw.SEL) callconv(.c) raw.id;
+
+    const alloc_fn: AllocFn = @ptrCast(&raw.message.objc_msgSend);
+    const init_fn: InitFn = @ptrCast(&raw.message.objc_msgSend);
+
+    const obj = init_fn(alloc_fn(cls, sel_alloc), sel_init);
+    try testing.expect(obj != null);
+
+    const retained = raw.compiler_runtime.objc_retain(obj);
+    try testing.expectEqual(obj, retained);
+
+    raw.compiler_runtime.objc_release(retained);
+    raw.compiler_runtime.objc_release(obj);
+}
+
+test "raw.compiler_runtime: autorelease pool lifecycle" {
+    const pool = raw.compiler_runtime.objc_autoreleasePoolPush();
+    try testing.expect(pool != null);
+
+    const cls = raw.runtime.objc_getClass("NSObject");
+    const sel_alloc = raw.objc.sel_registerName("alloc");
+    const sel_init = raw.objc.sel_registerName("init");
+
+    const AllocFn = *const fn (raw.Class, raw.SEL) callconv(.c) raw.id;
+    const InitFn = *const fn (raw.id, raw.SEL) callconv(.c) raw.id;
+
+    const alloc_fn: AllocFn = @ptrCast(&raw.message.objc_msgSend);
+    const init_fn: InitFn = @ptrCast(&raw.message.objc_msgSend);
+
+    const obj = init_fn(alloc_fn(cls, sel_alloc), sel_init);
+    try testing.expect(obj != null);
+
+    _ = raw.compiler_runtime.objc_autorelease(obj);
+    raw.compiler_runtime.objc_autoreleasePoolPop(pool);
+}
+
+test "raw.compiler_runtime: weak pointer operations" {
+    const cls = raw.runtime.objc_getClass("NSObject");
+    const sel_alloc = raw.objc.sel_registerName("alloc");
+    const sel_init = raw.objc.sel_registerName("init");
+
+    const AllocFn = *const fn (raw.Class, raw.SEL) callconv(.c) raw.id;
+    const InitFn = *const fn (raw.id, raw.SEL) callconv(.c) raw.id;
+
+    const alloc_fn: AllocFn = @ptrCast(&raw.message.objc_msgSend);
+    const init_fn: InitFn = @ptrCast(&raw.message.objc_msgSend);
+
+    const obj = init_fn(alloc_fn(cls, sel_alloc), sel_init);
+    try testing.expect(obj != null);
+    defer raw.compiler_runtime.objc_release(obj);
+
+    var weak_location: raw.id = null;
+    const init_result = raw.compiler_runtime.objc_initWeak(&weak_location, obj);
+    try testing.expectEqual(obj, init_result);
+
+    const loaded = raw.compiler_runtime.objc_loadWeak(&weak_location);
+    try testing.expectEqual(obj, loaded);
+
+    _ = raw.compiler_runtime.objc_storeWeak(&weak_location, null);
+    try testing.expect(weak_location == null);
+
+    raw.compiler_runtime.objc_destroyWeak(&weak_location);
+}

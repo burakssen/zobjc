@@ -28,3 +28,7 @@ pub const AbiArgumentType = arguments.AbiArgumentType;
 pub const AbiReturnType = returns.AbiReturnType;
 pub const toAbi = arguments.toAbi;
 pub const fromAbi = returns.fromAbi;
+
+test {
+    @import("std").testing.refAllDecls(@This());
+}

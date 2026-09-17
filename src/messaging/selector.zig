@@ -4,11 +4,11 @@
 //! into canonical runtime SEL values while verifying argument counts at compile time.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const runtime = @import("../runtime/root.zig");
+const raw = @import("raw");
+const runtime = @import("runtime");
 const Selector = runtime.Selector;
 
-// ponytail: Use the Objective-C runtime's interned selector machinery directly with zero extra caching.
+// Use the Objective-C runtime's interned selector machinery directly with zero extra caching.
 
 /// Returns true if `T` is an acceptable selector representation.
 pub fn isValidSelector(comptime T: type) bool {

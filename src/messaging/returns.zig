@@ -4,14 +4,15 @@
 //! into user-requested types, enforcing non-null invariants.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const runtime = @import("../runtime/root.zig");
+const testing = std.testing;
+const raw = @import("raw");
+const runtime = @import("runtime");
 const Object = runtime.Object;
 const Class = runtime.Class;
 const Selector = runtime.Selector;
 const Imp = runtime.Imp;
 
-// ponytail: Explicit type mapping matching ABI classification requirements with zero allocation.
+// Explicit type mapping matching ABI classification requirements with zero allocation.
 
 /// Maps a user-requested return type `T` to its low-level C ABI return type.
 pub fn AbiReturnType(comptime T: type) type {
@@ -85,4 +86,44 @@ pub inline fn fromAbi(comptime Return: type, raw_val: AbiReturnType(Return)) Ret
     } else {
         return raw_val;
     }
+}
+
+const TestEnum = enum(c_int) {
+    alpha = 1,
+    beta = 2,
+};
+
+const Rect = extern struct {
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+};
+
+test "returns: normalization to raw ABI return types" {
+    try testing.expectEqual(raw.id, AbiReturnType(Object));
+    try testing.expectEqual(raw.id, AbiReturnType(?Object));
+    try testing.expectEqual(raw.Class, AbiReturnType(Class));
+    try testing.expectEqual(raw.Class, AbiReturnType(?Class));
+    try testing.expectEqual(raw.SEL, AbiReturnType(Selector));
+    try testing.expectEqual(raw.SEL, AbiReturnType(?Selector));
+    try testing.expectEqual(raw.IMP, AbiReturnType(Imp));
+    try testing.expectEqual(raw.IMP, AbiReturnType(?Imp));
+    try testing.expectEqual(c_int, AbiReturnType(TestEnum));
+    try testing.expectEqual(void, AbiReturnType(void));
+    try testing.expectEqual(Rect, AbiReturnType(Rect));
+}
+
+test "returns: fromAbi value conversion" {
+    const e = fromAbi(TestEnum, 2);
+    try testing.expectEqual(TestEnum.beta, e);
+
+    const v = fromAbi(void, {});
+    try testing.expectEqual({}, v);
+
+    const opt_obj = fromAbi(?Object, null);
+    try testing.expectEqual(@as(?Object, null), opt_obj);
+
+    const opt_cls = fromAbi(?Class, null);
+    try testing.expectEqual(@as(?Class, null), opt_cls);
 }

@@ -3,13 +3,15 @@
 //! A non-owning, non-null handle to an Objective-C method descriptor (`Method`).
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const conversion = @import("conversion.zig");
 const Selector = @import("selector.zig").Selector;
 const Imp = @import("imp.zig").Imp;
 const MethodDescription = @import("method_description.zig").MethodDescription;
-const memory = @import("../memory/root.zig");
-const encoding = @import("../encoding/root.zig");
+const memory = @import("memory");
+const encoding = @import("encoding");
 
 pub const Method = struct {
     ptr: *raw.objc_method,
@@ -40,16 +42,6 @@ pub const Method = struct {
         return Imp.fromRaw(raw.runtime.method_getImplementation(self.ptr)).?;
     }
 
-    /// Alias for selector() to match naming parity.
-    pub inline fn getName(self: Method) Selector {
-        return self.selector();
-    }
-
-    /// Alias for implementation() to match naming parity.
-    pub inline fn getImplementation(self: Method) Imp {
-        return self.implementation();
-    }
-
     /// Returns a borrowed string describing the method's parameter and return types.
     pub inline fn typeEncoding(self: Method) ?[:0]const u8 {
         return conversion.spanNullableCString(raw.runtime.method_getTypeEncoding(self.ptr));
@@ -67,7 +59,7 @@ pub const Method = struct {
         receiver: anytype,
         args: anytype,
     ) Return {
-        const messaging = @import("../messaging/root.zig");
+        const messaging = @import("messaging");
         return messaging.invoke(self, Return, receiver, args);
     }
 
@@ -125,3 +117,83 @@ pub const Method = struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.Method));
     }
 };
+
+test "method: NSObject description method introspection" {
+    const cls = objc.requireClass("NSObject");
+    const desc_sel = objc.sel("description");
+    const method = cls.instanceMethod(desc_sel).?;
+
+    try testing.expect(method.selector().eql(desc_sel));
+    try testing.expect(@intFromPtr(method.implementation().ptr) != 0);
+
+    const enc = method.typeEncoding();
+    try testing.expect(enc != null);
+    try testing.expect(enc.?.len > 0);
+    try testing.expect(method.argumentCount() >= 2);
+
+    var ret_buf: [128]u8 = undefined;
+    method.returnType(&ret_buf);
+    try testing.expectEqualStrings("@", std.mem.sliceTo(&ret_buf, 0));
+
+    var arg0_buf: [128]u8 = undefined;
+    method.argumentType(0, &arg0_buf);
+    try testing.expectEqualStrings("@", std.mem.sliceTo(&arg0_buf, 0));
+
+    var arg1_buf: [128]u8 = undefined;
+    method.argumentType(1, &arg1_buf);
+    try testing.expectEqualStrings(":", std.mem.sliceTo(&arg1_buf, 0));
+
+    const desc_struct = method.description();
+    try testing.expect(desc_struct != null);
+    try testing.expect(desc_struct.?.selector.?.eql(desc_sel));
+}
+
+test "method: exchange implementations" {
+    const NSObject = objc.requireClass("NSObject");
+    const Subclass = objc.allocateClassPair(NSObject, "MethodExchangeTestClass").?;
+
+    const Dummy = struct {
+        fn m1(target: objc.raw.id, sel_val: objc.raw.SEL) callconv(.c) i32 {
+            _ = target;
+            _ = sel_val;
+            return 100;
+        }
+        fn m2(target: objc.raw.id, sel_val: objc.raw.SEL) callconv(.c) i32 {
+            _ = target;
+            _ = sel_val;
+            return 200;
+        }
+    };
+
+    const sel1 = objc.sel("methodOne");
+    const sel2 = objc.sel("methodTwo");
+    _ = Subclass.addMethod(sel1, objc.Imp.fromRawNonNull(@ptrCast(&Dummy.m1)), "i@:");
+    _ = Subclass.addMethod(sel2, objc.Imp.fromRawNonNull(@ptrCast(&Dummy.m2)), "i@:");
+    objc.registerClassPair(Subclass);
+    defer objc.disposeClassPair(Subclass);
+
+    const method1 = Subclass.instanceMethod(sel1).?;
+    const method2 = Subclass.instanceMethod(sel2).?;
+    const inst = Subclass.send(objc.Object, "alloc", .{})
+        .send(objc.Object, "init", .{});
+    defer inst.send(void, "dealloc", .{});
+
+    try testing.expectEqual(@as(i32, 100), inst.send(i32, sel1, .{}));
+    try testing.expectEqual(@as(i32, 200), inst.send(i32, sel2, .{}));
+    method1.exchange(method2);
+    try testing.expectEqual(@as(i32, 200), inst.send(i32, sel1, .{}));
+    try testing.expectEqual(@as(i32, 100), inst.send(i32, sel2, .{}));
+}
+
+test "conversion: Method fromRaw and toRaw roundtrip" {
+    const cls = objc.requireClass("NSObject");
+    const method = cls.instanceMethod(objc.sel("init")).?;
+    const raw_method = method.toRaw();
+    try testing.expect(method.eql(Method.fromRaw(raw_method).?));
+    try testing.expectEqual(@as(?Method, null), Method.fromRaw(null));
+}
+
+test "handle: Method is pointer-sized and pointer-aligned" {
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Method));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Method));
+}

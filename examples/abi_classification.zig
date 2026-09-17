@@ -4,7 +4,7 @@
 //! at compile time across macOS arm64 and x86_64 targets.
 
 const std = @import("std");
-const objc = @import("objc");
+const objc = @import("zobjc");
 
 const Target = objc.abi.Target;
 const ReturnConvention = objc.abi.ReturnConvention;

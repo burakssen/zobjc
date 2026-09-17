@@ -10,8 +10,19 @@ const merge_mod = @import("merge.zig");
 const merge = merge_mod.merge;
 const layout = @import("../layout.zig");
 const traits = @import("../internal/traits.zig");
+const testing = std.testing;
+const ReturnConvention = @import("../convention.zig").ReturnConvention;
+const ABIResult = @import("../convention.zig").ABIResult;
 
-// ponytail: Pure compile-time recursive decomposition into up to 2 eightbytes.
+fn aggregateReturnConvention(comptime T: type) ReturnConvention {
+    return if (classifyAggregate(T).isMemory()) .stret else .normal;
+}
+
+fn aggregateClassifyReturn(comptime T: type) ABIResult {
+    return if (classifyAggregate(T).isMemory()) .indirect else .direct;
+}
+
+// Pure compile-time recursive decomposition into up to 2 eightbytes.
 pub fn classifyAggregate(comptime T: type) EightbyteClassification {
     const total_size = layout.sizeOf(T);
 
@@ -155,4 +166,107 @@ fn cleanup(result: *EightbyteClassification, total_size: usize) void {
         result.classes[0] = .memory;
         result.classes[1] = .memory;
     }
+}
+
+test "x86_64 aggregate: small aggregates (<= 16 bytes) use normal" {
+    const S1 = extern struct { a: u8 };
+    const S2 = extern struct { a: u16 };
+    const S4 = extern struct { a: u32 };
+    const S8 = extern struct { a: u64 };
+    const S8Mixed = extern struct { a: i32, b: f32 };
+    const S12 = extern struct { a: i32, b: i32, c: i32 };
+    const S16Int = extern struct { a: u64, b: u64 };
+    const S16Float = extern struct { a: f64, b: f64 };
+    const S16Mixed = extern struct { a: i64, b: f64 };
+
+    try testing.expectEqual(.normal, aggregateReturnConvention(S1));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S2));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S4));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S8));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S8Mixed));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S12));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S16Int));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S16Float));
+    try testing.expectEqual(.normal, aggregateReturnConvention(S16Mixed));
+}
+
+test "x86_64 aggregate: same-size different-layout registers" {
+    const A = extern struct { a: u64, b: u64 };
+    const B = extern struct { a: f64, b: f64 };
+    const C = extern struct { a: i64, b: f64 };
+    const D = extern struct { a: f64, b: i64 };
+
+    try testing.expectEqual(.normal, aggregateReturnConvention(A));
+    try testing.expectEqual(.normal, aggregateReturnConvention(B));
+    try testing.expectEqual(.normal, aggregateReturnConvention(C));
+    try testing.expectEqual(.normal, aggregateReturnConvention(D));
+
+    const class_a = classifyAggregate(A);
+    try testing.expectEqual(Class.integer, class_a.classes[0]);
+    try testing.expectEqual(Class.integer, class_a.classes[1]);
+
+    const class_b = classifyAggregate(B);
+    try testing.expectEqual(Class.sse, class_b.classes[0]);
+    try testing.expectEqual(Class.sse, class_b.classes[1]);
+
+    const class_c = classifyAggregate(C);
+    try testing.expectEqual(Class.integer, class_c.classes[0]);
+    try testing.expectEqual(Class.sse, class_c.classes[1]);
+
+    const class_d = classifyAggregate(D);
+    try testing.expectEqual(Class.sse, class_d.classes[0]);
+    try testing.expectEqual(Class.integer, class_d.classes[1]);
+}
+
+test "x86_64 aggregate: large aggregates (> 16 bytes) use stret" {
+    const S17 = extern struct { a: u64, b: u64, c: u8 };
+    const S24 = extern struct { a: f64, b: f64, c: f64 };
+    const S32 = extern struct { a: f64, b: f64, c: f64, d: f64 };
+
+    try testing.expectEqual(.stret, aggregateReturnConvention(S17));
+    try testing.expectEqual(.stret, aggregateReturnConvention(S24));
+    try testing.expectEqual(.stret, aggregateReturnConvention(S32));
+    try testing.expectEqual(.indirect, aggregateClassifyReturn(S17));
+    try testing.expectEqual(.indirect, aggregateClassifyReturn(S24));
+    try testing.expectEqual(.indirect, aggregateClassifyReturn(S32));
+}
+
+test "x86_64 aggregate: nested aggregates" {
+    const Point = extern struct { x: f64, y: f64 };
+    const Size = extern struct { width: f64, height: f64 };
+    const Rect = extern struct { origin: Point, size: Size };
+    const TaggedPoint = extern struct { pt: Point, tag: i32 };
+
+    try testing.expectEqual(.normal, aggregateReturnConvention(Point));
+    try testing.expectEqual(.normal, aggregateReturnConvention(Size));
+    try testing.expectEqual(.stret, aggregateReturnConvention(TaggedPoint));
+    try testing.expectEqual(.stret, aggregateReturnConvention(Rect));
+}
+
+test "x86_64 aggregate: arrays in structs" {
+    const Array16 = extern struct { vals: [2]f64 };
+    const Array24 = extern struct { vals: [3]f64 };
+
+    try testing.expectEqual(.normal, aggregateReturnConvention(Array16));
+    try testing.expectEqual(.stret, aggregateReturnConvention(Array24));
+
+    const class_arr = classifyAggregate(Array16);
+    try testing.expectEqual(Class.sse, class_arr.classes[0]);
+    try testing.expectEqual(Class.sse, class_arr.classes[1]);
+}
+
+test "x86_64 aggregate: unions" {
+    const Union8 = extern union { i: i64, d: f64 };
+    try testing.expectEqual(.normal, aggregateReturnConvention(Union8));
+
+    const class_u = classifyAggregate(Union8);
+    try testing.expectEqual(Class.integer, class_u.classes[0]);
+}
+
+test "x86_64 aggregate: long double in aggregate" {
+    const StructWithLongDouble = extern struct { x: c_longdouble };
+    const StructMixedLongDouble = extern struct { a: i32, b: c_longdouble };
+
+    try testing.expectEqual(.normal, aggregateReturnConvention(StructWithLongDouble));
+    try testing.expectEqual(.stret, aggregateReturnConvention(StructMixedLongDouble));
 }

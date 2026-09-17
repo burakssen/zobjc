@@ -4,8 +4,10 @@
 //! Frees the array buffer with `free()` upon `deinit()`.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const PropertyAttribute = @import("../runtime/property_attribute.zig").PropertyAttribute;
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
+const PropertyAttribute = @import("runtime").PropertyAttribute;
 const c_free = @import("c_free.zig");
 
 /// An owning wrapper for an array of `raw.objc_property_attribute_t` records.
@@ -76,3 +78,26 @@ pub const OwnedPropertyAttributes = struct {
         }
     }
 };
+
+test "OwnedPropertyAttributes: property.attributesList" {
+    const NSObject = objc.requireClass("NSObject");
+    const prop = NSObject.property("className") orelse NSObject.property("description").?;
+    var attrs = prop.attributesList();
+    defer attrs.deinit();
+    try testing.expect(!attrs.isEmpty());
+    try testing.expect(attrs.count() > 0);
+    try testing.expect(std.mem.span(attrs.get(0).?.name).len > 0);
+
+    var count: usize = 0;
+    var iter = attrs.iterator();
+    while (iter.next()) |_| count += 1;
+    try testing.expectEqual(attrs.count(), count);
+}
+
+test "OwnedPropertyAttributes: empty representation" {
+    var empty_attrs = OwnedPropertyAttributes.empty();
+    try testing.expect(empty_attrs.isEmpty());
+    try testing.expectEqual(@as(usize, 0), empty_attrs.count());
+    try testing.expect(empty_attrs.get(0) == null);
+    empty_attrs.deinit();
+}

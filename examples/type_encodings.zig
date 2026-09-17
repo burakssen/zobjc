@@ -1,7 +1,7 @@
-//! Example demonstrating Phase 4 Objective-C type encoding and signature system.
+//! Example demonstrating Objective-C type encoding and signature system.
 
 const std = @import("std");
-const objc = @import("objc");
+const objc = @import("zobjc");
 
 const Point = extern struct {
     x: f64,

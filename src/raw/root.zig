@@ -10,8 +10,6 @@ pub const message = @import("message.zig");
 pub const blocks = @import("blocks.zig");
 pub const compiler_runtime = @import("compiler_runtime.zig");
 pub const availability = @import("availability.zig");
-pub const deprecated = @import("deprecated.zig");
-pub const internal = @import("internal.zig");
 
 // --- Fundamental Types ---
 
@@ -56,30 +54,6 @@ pub inline fn boolParam(param: bool) BOOL {
     return @intFromBool(param);
 }
 
-// --- Compatibility Bridge ---
-// Provides a backward-compatible 'c' namespace for existing callers during migration.
-pub const c = struct {
-    pub const id = types.id;
-    pub const Class = types.Class;
-    pub const SEL = types.SEL;
-    pub const IMP = types.IMP;
-    pub const Method = types.Method;
-    pub const Ivar = types.Ivar;
-    pub const objc_property_t = types.objc_property_t;
-    pub const Protocol = types.Protocol;
-    pub const BOOL = types.BOOL;
-    pub const objc_super = types.objc_super;
-
-    // Functions forwarded to raw modules
-    pub const sel_registerName = objc.sel_registerName;
-    pub const sel_getName = objc.sel_getName;
-    pub const objc_getClass = runtime.objc_getClass;
-    pub const objc_getMetaClass = runtime.objc_getMetaClass;
-    pub const objc_allocateClassPair = runtime.objc_allocateClassPair;
-    pub const objc_registerClassPair = runtime.objc_registerClassPair;
-    pub const objc_disposeClassPair = runtime.objc_disposeClassPair;
-    pub const objc_getProtocol = runtime.objc_getProtocol;
-    pub const objc_enumerationMutation = runtime.objc_enumerationMutation;
-    pub const objc_msgSend = message.objc_msgSend;
-    pub const objc_msgSendSuper = message.objc_msgSendSuper;
-};
+test {
+    @import("std").testing.refAllDecls(@This());
+}

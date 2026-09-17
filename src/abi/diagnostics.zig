@@ -2,9 +2,9 @@
 
 const std = @import("std");
 const Target = @import("target.zig").Target;
-const encoding = @import("../encoding/root.zig");
+const encoding = @import("encoding");
 
-// ponytail: Lean compile-time assertions reusing Phase 4 type encodability checks.
+// Lean compile-time assertions reusing type encodability checks.
 
 /// Asserts that `T` is a valid return type for Objective-C ABI classification.
 pub fn assertValidReturn(comptime T: type) void {

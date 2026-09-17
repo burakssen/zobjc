@@ -23,7 +23,7 @@ pub const LayoutResult = struct {
     pub fn rawPointer(self: LayoutResult) ?*const anyopaque {
         if (!self.has_layout) return null;
         if (self.is_compact) {
-            // // ponytail: compact values < 0x1000 are cast directly to pointer per libclosure SPI
+            // // compact values < 0x1000 are cast directly to pointer per libclosure SPI
             return @ptrFromInt(@as(usize, self.compact_value));
         }
         return @ptrCast(self.extended_bytes.ptr);

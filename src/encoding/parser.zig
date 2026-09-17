@@ -12,6 +12,45 @@ const Qualifiers = types.Qualifiers;
 const Field = types.Field;
 const AggregateType = types.AggregateType;
 const ObjectType = types.ObjectType;
+const testing = std.testing;
+const encoder = @import("encoder.zig");
+
+extern fn fixture_encode_char() [*:0]const u8;
+extern fn fixture_encode_uchar() [*:0]const u8;
+extern fn fixture_encode_short() [*:0]const u8;
+extern fn fixture_encode_ushort() [*:0]const u8;
+extern fn fixture_encode_int() [*:0]const u8;
+extern fn fixture_encode_uint() [*:0]const u8;
+extern fn fixture_encode_long() [*:0]const u8;
+extern fn fixture_encode_ulong() [*:0]const u8;
+extern fn fixture_encode_longlong() [*:0]const u8;
+extern fn fixture_encode_ulonglong() [*:0]const u8;
+extern fn fixture_encode_float() [*:0]const u8;
+extern fn fixture_encode_double() [*:0]const u8;
+extern fn fixture_encode_long_double() [*:0]const u8;
+extern fn fixture_encode_bool() [*:0]const u8;
+extern fn fixture_encode_c99_bool() [*:0]const u8;
+extern fn fixture_encode_void() [*:0]const u8;
+extern fn fixture_encode_char_ptr() [*:0]const u8;
+extern fn fixture_encode_const_char_ptr() [*:0]const u8;
+extern fn fixture_encode_void_ptr() [*:0]const u8;
+extern fn fixture_encode_id() [*:0]const u8;
+extern fn fixture_encode_class() [*:0]const u8;
+extern fn fixture_encode_sel() [*:0]const u8;
+extern fn fixture_encode_int_ptr() [*:0]const u8;
+extern fn fixture_encode_int_ptr_ptr() [*:0]const u8;
+extern fn fixture_encode_int_array_4() [*:0]const u8;
+extern fn fixture_encode_float_array_16() [*:0]const u8;
+extern fn fixture_encode_matrix_4_4() [*:0]const u8;
+extern fn fixture_encode_struct_s1() [*:0]const u8;
+extern fn fixture_encode_struct_cgpoint() [*:0]const u8;
+extern fn fixture_encode_union_u1() [*:0]const u8;
+extern fn fixture_encode_struct_nested() [*:0]const u8;
+extern fn fixture_encode_struct_s1_ptr() [*:0]const u8;
+extern fn fixture_encode_struct_s1_ptr_ptr() [*:0]const u8;
+extern fn fixture_encode_block_void() [*:0]const u8;
+extern fn fixture_encode_block_int() [*:0]const u8;
+extern fn fixture_encode_atomic_int() [*:0]const u8;
 
 pub const ParseError = error{
     UnexpectedEnd,
@@ -217,8 +256,10 @@ pub const Parser = struct {
                     self.index += 1;
                 }
                 if (self.peek() != '>') return error.InvalidObjectEncoding;
-                const proto_name = try self.allocator.dupe(u8, self.input[proto_start..self.index]);
-                try protocols.append(self.allocator, proto_name);
+                var proto_name: ?[]const u8 = try self.allocator.dupe(u8, self.input[proto_start..self.index]);
+                errdefer if (proto_name) |value| self.allocator.free(value);
+                try protocols.append(self.allocator, proto_name.?);
+                proto_name = null;
                 self.index += 1; // consume '>'
             } else if (ch == '"') {
                 self.index += 1; // consume closing quote
@@ -317,6 +358,7 @@ pub const Parser = struct {
             }
 
             var field_name: ?[]const u8 = null;
+            errdefer if (field_name) |field_name_value| self.allocator.free(field_name_value);
             if (ch == '"') {
                 self.index += 1;
                 const fn_start = self.index;
@@ -329,11 +371,14 @@ pub const Parser = struct {
                 self.index += 1; // consume closing quote
             }
 
-            const field_type = try self.parseQualifiedType();
+            var field_type: ?QualifiedType = try self.parseQualifiedType();
+            errdefer if (field_type) |*parsed| parsed.deinit(self.allocator);
             try fields.append(self.allocator, .{
                 .name = field_name,
-                .type = field_type,
+                .type = field_type.?,
             });
+            field_name = null;
+            field_type = null;
         }
 
         if (!closed) return if (is_union) error.MissingUnionTerminator else error.MissingStructTerminator;
@@ -353,10 +398,235 @@ pub fn parse(allocator: std.mem.Allocator, input: []const u8) !QualifiedType {
     var parser = Parser.init(allocator, input);
     const result = try parser.parseQualifiedType();
     if (parser.index < input.len) {
-        // ponytail: clean up AST if trailing input is present
+        // clean up AST if trailing input is present
         var mut_res = result;
         mut_res.deinit(allocator);
         return error.TrailingInput;
     }
     return result;
+}
+
+test "parser: primitives and qualifiers" {
+    const allocator = testing.allocator;
+    var int_type = try parse(allocator, "i");
+    defer int_type.deinit(allocator);
+    try testing.expect(int_type.type == .scalar and int_type.type.scalar == .int);
+
+    var dbl_type = try parse(allocator, "d");
+    defer dbl_type.deinit(allocator);
+    try testing.expect(dbl_type.type == .scalar and dbl_type.type.scalar == .double);
+
+    var void_type = try parse(allocator, "v");
+    defer void_type.deinit(allocator);
+    try testing.expect(void_type.type == .scalar and void_type.type.scalar == .void);
+
+    var sel_type = try parse(allocator, ":");
+    defer sel_type.deinit(allocator);
+    try testing.expect(sel_type.type == .selector);
+
+    var cls_type = try parse(allocator, "#");
+    defer cls_type.deinit(allocator);
+    try testing.expect(cls_type.type == .class);
+
+    var const_ptr = try parse(allocator, "r^i");
+    defer const_ptr.deinit(allocator);
+    try testing.expect(const_ptr.qualifiers.const_);
+    try testing.expect(const_ptr.type == .pointer);
+
+    var inout_obj = try parse(allocator, "N@");
+    defer inout_obj.deinit(allocator);
+    try testing.expect(inout_obj.qualifiers.inout);
+    try testing.expect(inout_obj.type == .object);
+
+    var oneway_void = try parse(allocator, "Vv");
+    defer oneway_void.deinit(allocator);
+    try testing.expect(oneway_void.qualifiers.oneway);
+    try testing.expect(oneway_void.type == .scalar and oneway_void.type.scalar == .void);
+}
+
+test "parser: object variants" {
+    const allocator = testing.allocator;
+    var plain_obj = try parse(allocator, "@");
+    defer plain_obj.deinit(allocator);
+    try testing.expect(plain_obj.type == .object);
+    try testing.expect(plain_obj.type.object.class_name == null);
+
+    var block_obj = try parse(allocator, "@?");
+    defer block_obj.deinit(allocator);
+    try testing.expect(block_obj.type == .block);
+
+    var str_obj = try parse(allocator, "@\"NSString\"");
+    defer str_obj.deinit(allocator);
+    try testing.expect(str_obj.type == .object);
+    try testing.expectEqualStrings("NSString", str_obj.type.object.class_name.?);
+
+    var proto_obj = try parse(allocator, "@\"<NSCopying>\"");
+    defer proto_obj.deinit(allocator);
+    try testing.expect(proto_obj.type == .object);
+    try testing.expect(proto_obj.type.object.class_name == null);
+    try testing.expectEqual(@as(usize, 1), proto_obj.type.object.protocols.len);
+    try testing.expectEqualStrings("NSCopying", proto_obj.type.object.protocols[0]);
+
+    var multi_obj = try parse(allocator, "@\"NSString<NSCopying><NSSecureCoding>\"");
+    defer multi_obj.deinit(allocator);
+    try testing.expect(multi_obj.type == .object);
+    try testing.expectEqualStrings("NSString", multi_obj.type.object.class_name.?);
+    try testing.expectEqual(@as(usize, 2), multi_obj.type.object.protocols.len);
+    try testing.expectEqualStrings("NSCopying", multi_obj.type.object.protocols[0]);
+    try testing.expectEqualStrings("NSSecureCoding", multi_obj.type.object.protocols[1]);
+}
+
+test "parser: pointers, arrays, bitfields, and atomics" {
+    const allocator = testing.allocator;
+    var ptr = try parse(allocator, "^i");
+    defer ptr.deinit(allocator);
+    try testing.expect(ptr.type == .pointer);
+    try testing.expect(ptr.type.pointer.child.type == .scalar and ptr.type.pointer.child.type.scalar == .int);
+
+    var fn_ptr = try parse(allocator, "^?");
+    defer fn_ptr.deinit(allocator);
+    try testing.expect(fn_ptr.type == .function_pointer);
+
+    var arr = try parse(allocator, "[8i]");
+    defer arr.deinit(allocator);
+    try testing.expect(arr.type == .array);
+    try testing.expectEqual(@as(usize, 8), arr.type.array.len);
+    try testing.expect(arr.type.array.child.type == .scalar and arr.type.array.child.type.scalar == .int);
+
+    var nested_arr = try parse(allocator, "[2[3f]]");
+    defer nested_arr.deinit(allocator);
+    try testing.expect(nested_arr.type == .array);
+    try testing.expectEqual(@as(usize, 2), nested_arr.type.array.len);
+    try testing.expect(nested_arr.type.array.child.type == .array);
+    try testing.expectEqual(@as(usize, 3), nested_arr.type.array.child.type.array.len);
+
+    var bf = try parse(allocator, "b5");
+    defer bf.deinit(allocator);
+    try testing.expect(bf.type == .bitfield);
+    try testing.expectEqual(@as(u32, 5), bf.type.bitfield.bits);
+
+    var at = try parse(allocator, "Ai");
+    defer at.deinit(allocator);
+    try testing.expect(at.type == .atomic);
+    try testing.expect(at.type.atomic.child.type == .scalar and at.type.atomic.child.type.scalar == .int);
+}
+
+test "parser: structures and unions" {
+    const allocator = testing.allocator;
+    var point = try parse(allocator, "{CGPoint=dd}");
+    defer point.deinit(allocator);
+    try testing.expect(point.type == .structure);
+    try testing.expectEqualStrings("CGPoint", point.type.structure.name);
+    try testing.expectEqual(@as(usize, 2), point.type.structure.fields.len);
+
+    var opaque_st = try parse(allocator, "{OpaqueType}");
+    defer opaque_st.deinit(allocator);
+    try testing.expect(opaque_st.type == .structure);
+    try testing.expectEqualStrings("OpaqueType", opaque_st.type.structure.name);
+    try testing.expect(opaque_st.type.structure.@"opaque");
+
+    var anon_st = try parse(allocator, "{?=dd}");
+    defer anon_st.deinit(allocator);
+    try testing.expect(anon_st.type == .structure);
+    try testing.expectEqualStrings("?", anon_st.type.structure.name);
+
+    var quoted_st = try parse(allocator, "{CGPoint=\"x\"d\"y\"d}");
+    defer quoted_st.deinit(allocator);
+    try testing.expect(quoted_st.type == .structure);
+    try testing.expectEqualStrings("x", quoted_st.type.structure.fields[0].name.?);
+    try testing.expectEqualStrings("y", quoted_st.type.structure.fields[1].name.?);
+
+    var union_val = try parse(allocator, "(U1=if)");
+    defer union_val.deinit(allocator);
+    try testing.expect(union_val.type == .union_);
+    try testing.expectEqualStrings("U1", union_val.type.union_.name);
+    try testing.expectEqual(@as(usize, 2), union_val.type.union_.fields.len);
+}
+
+test "parser: round-trip and invalid input" {
+    const allocator = testing.allocator;
+    const test_encodings = [_][]const u8{ "i", "d", "B", "^i", "[4f]", "{CGPoint=dd}", "(U1=if)", "@\"NSString\"", "@?", "^?", "b7", "Ai" };
+    for (test_encodings) |original| {
+        var parsed1 = try parse(allocator, original);
+        defer parsed1.deinit(allocator);
+        const encoded_str = try encoder.encode(allocator, parsed1);
+        defer allocator.free(encoded_str);
+        var parsed2 = try parse(allocator, encoded_str);
+        defer parsed2.deinit(allocator);
+        try testing.expect(parsed1.eql(parsed2));
+    }
+
+    try testing.expectError(error.UnexpectedEnd, parse(allocator, ""));
+    try testing.expectError(error.MissingStructTerminator, parse(allocator, "{CGPoint=dd"));
+    try testing.expectError(error.MissingArrayTerminator, parse(allocator, "[4i"));
+    try testing.expectError(error.MissingAggregateName, parse(allocator, "{}"));
+    try testing.expectError(error.InvalidNumber, parse(allocator, "[i]"));
+    try testing.expectError(error.InvalidNumber, parse(allocator, "b"));
+    try testing.expectError(error.TrailingInput, parse(allocator, "i extra"));
+}
+
+test "parser: allocation failures clean partial aggregate trees" {
+    const input = "{Thing=\"first\"@\"Class<Proto>\"\"second\"{Nested=i}}";
+    for (0..64) |fail_index| {
+        var failing = std.testing.FailingAllocator.init(testing.allocator, .{ .fail_index = fail_index });
+        const allocator = failing.allocator();
+        if (parse(allocator, input)) |parsed| {
+            var owned = parsed;
+            owned.deinit(allocator);
+        } else |err| switch (err) {
+            error.OutOfMemory => {},
+            else => return err,
+        }
+        try testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+    }
+}
+
+test "parser: round-trip every Clang fixture encoding" {
+    const fixtures = [_]*const fn () callconv(.c) [*:0]const u8{
+        fixture_encode_char,
+        fixture_encode_uchar,
+        fixture_encode_short,
+        fixture_encode_ushort,
+        fixture_encode_int,
+        fixture_encode_uint,
+        fixture_encode_long,
+        fixture_encode_ulong,
+        fixture_encode_longlong,
+        fixture_encode_ulonglong,
+        fixture_encode_float,
+        fixture_encode_double,
+        fixture_encode_long_double,
+        fixture_encode_bool,
+        fixture_encode_c99_bool,
+        fixture_encode_void,
+        fixture_encode_char_ptr,
+        fixture_encode_const_char_ptr,
+        fixture_encode_void_ptr,
+        fixture_encode_id,
+        fixture_encode_class,
+        fixture_encode_sel,
+        fixture_encode_int_ptr,
+        fixture_encode_int_ptr_ptr,
+        fixture_encode_int_array_4,
+        fixture_encode_float_array_16,
+        fixture_encode_matrix_4_4,
+        fixture_encode_struct_s1,
+        fixture_encode_struct_cgpoint,
+        fixture_encode_union_u1,
+        fixture_encode_struct_nested,
+        fixture_encode_struct_s1_ptr,
+        fixture_encode_struct_s1_ptr_ptr,
+        fixture_encode_block_void,
+        fixture_encode_block_int,
+        fixture_encode_atomic_int,
+    };
+
+    for (fixtures) |fixture| {
+        const original = std.mem.span(fixture());
+        var parsed = try parse(testing.allocator, original);
+        defer parsed.deinit(testing.allocator);
+        const encoded = try encoder.encode(testing.allocator, parsed);
+        defer testing.allocator.free(encoded);
+        try testing.expectEqualStrings(original, encoded);
+    }
 }

@@ -4,6 +4,8 @@
 //! The array itself is freed via `free()`, while the strings inside refer to image metadata.
 
 const std = @import("std");
+const testing = std.testing;
+const objc = @import("zobjc");
 const c_free = @import("c_free.zig");
 
 /// An owning wrapper for an array of C strings returned by runtime image introspection.
@@ -71,3 +73,39 @@ pub const OwnedCStringList = struct {
         }
     }
 };
+
+test "OwnedCStringList: runtime.imageNames and classNamesForImage" {
+    var images = objc.runtime.imageNames();
+    defer images.deinit();
+    try testing.expect(!images.isEmpty());
+    try testing.expect(images.count() > 0);
+    try testing.expect(images.get(0).?.len > 0);
+
+    var count: usize = 0;
+    var iter = images.iterator();
+    while (iter.next()) |_| count += 1;
+    try testing.expectEqual(images.count(), count);
+
+    var libobjc_image: ?[:0]const u8 = null;
+    var img_iter = images.iterator();
+    while (img_iter.next()) |img| {
+        if (std.mem.indexOf(u8, img, "libobjc") != null) {
+            libobjc_image = img;
+            break;
+        }
+    }
+    if (libobjc_image) |target_image| {
+        var class_names = objc.runtime.classNamesForImage(target_image);
+        defer class_names.deinit();
+        try testing.expect(class_names.count() > 0);
+        try testing.expect(class_names.get(0).?.len > 0);
+    }
+}
+
+test "OwnedCStringList: empty representation" {
+    var empty_strings = OwnedCStringList.empty();
+    try testing.expect(empty_strings.isEmpty());
+    try testing.expectEqual(@as(usize, 0), empty_strings.count());
+    try testing.expect(empty_strings.get(0) == null);
+    empty_strings.deinit();
+}

@@ -1,13 +1,13 @@
 //! Optional runtime method signature validation and debug checked messaging.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const runtime = @import("../runtime/root.zig");
+const raw = @import("raw");
+const runtime = @import("runtime");
 const receiver_mod = @import("receiver.zig");
 const selector_mod = @import("selector.zig");
 const send_mod = @import("send.zig");
 
-// ponytail: Optional diagnostic layer that compiles away in fast release modes.
+// Optional diagnostic layer that compiles away in fast release modes.
 
 /// Checks whether `receiver` has an implementation for `selector`.
 pub fn respondsToSelector(receiver: anytype, selector: anytype) bool {

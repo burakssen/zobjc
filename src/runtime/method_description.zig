@@ -1,6 +1,6 @@
 //! Typed Objective-C method description representation.
 
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 const Selector = @import("selector.zig").Selector;
 const conversion = @import("conversion.zig");
 

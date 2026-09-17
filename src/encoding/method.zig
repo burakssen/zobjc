@@ -13,10 +13,10 @@ const parser_mod = @import("parser.zig");
 const Parser = parser_mod.Parser;
 const encoder = @import("encoder.zig");
 const zig_type = @import("zig_type.zig");
-const raw = @import("../raw/root.zig");
-const Object = @import("../runtime/object.zig").Object;
-const Class = @import("../runtime/class.zig").Class;
-const Selector = @import("../runtime/selector.zig").Selector;
+const raw = @import("raw");
+const Object = @import("runtime").Object;
+const Class = @import("runtime").Class;
+const Selector = @import("runtime").Selector;
 
 /// An argument in an Objective-C method signature.
 pub const MethodArgument = struct {
@@ -269,4 +269,155 @@ pub fn validateMethodImplementation(comptime F: type) void {
         @compileError("Objective-C method implementation function must use callconv(.c)");
     }
     comptime _ = methodEncoding(F);
+}
+
+const testing = std.testing;
+
+test "method: parse compact and annotated signatures" {
+    const allocator = testing.allocator;
+    var sig = try parseMethod(allocator, "v@:i");
+    defer sig.deinit(allocator);
+    try testing.expect(sig.return_type.type == .scalar);
+    try testing.expectEqual(.void, sig.return_type.type.scalar);
+    try testing.expectEqual(@as(?usize, null), sig.frame_size);
+    try testing.expectEqual(@as(usize, 3), sig.arguments.len);
+    try testing.expect(sig.arguments[0].type.type == .object);
+    try testing.expect(sig.arguments[1].type.type == .selector);
+    try testing.expect(sig.arguments[2].type.type == .scalar);
+    try testing.expectEqual(.int, sig.arguments[2].type.type.scalar);
+
+    var annotated = try parseMethod(allocator, "v24@0:8i16");
+    defer annotated.deinit(allocator);
+    try testing.expectEqual(@as(?usize, 24), annotated.frame_size);
+    try testing.expectEqual(@as(?isize, 0), annotated.arguments[0].offset);
+    try testing.expectEqual(@as(?isize, 8), annotated.arguments[1].offset);
+    try testing.expectEqual(@as(?isize, 16), annotated.arguments[2].offset);
+}
+
+test "method: parse aggregates and encode round trip" {
+    const allocator = testing.allocator;
+    var sig = try parseMethod(allocator, "{CGPoint=dd}32@0:8{CGPoint=dd}16");
+    defer sig.deinit(allocator);
+    try testing.expect(sig.return_type.type == .structure);
+    try testing.expectEqualStrings("CGPoint", sig.return_type.type.structure.name);
+    try testing.expectEqual(@as(?usize, 32), sig.frame_size);
+    try testing.expect(sig.arguments[2].type.type == .structure);
+    try testing.expectEqual(@as(?isize, 16), sig.arguments[2].offset);
+
+    var compact = try parseMethod(allocator, "v@:i");
+    defer compact.deinit(allocator);
+    const encoded = try encodeMethod(allocator, compact, .{});
+    defer allocator.free(encoded);
+    try testing.expectEqualStrings("v@:i", encoded);
+}
+
+test "method: comptime methodEncoding from Zig callbacks" {
+    const Point = extern struct { x: f64, y: f64 };
+    const InstanceCallback = fn (Object, Selector, i32) callconv(.c) void;
+    const ClassCallback = fn (Class, Selector, [4]f32) callconv(.c) i32;
+    const StructReturnCallback = fn (Object, Selector) callconv(.c) Point;
+    const RawHandleCallback = fn (raw.id, raw.SEL, ?*anyopaque) callconv(.c) raw.id;
+
+    const enc1 = comptime methodEncoding(InstanceCallback);
+    const enc2 = comptime methodEncoding(ClassCallback);
+    const enc3 = comptime methodEncoding(StructReturnCallback);
+    const enc4 = comptime methodEncoding(RawHandleCallback);
+    try testing.expectEqualStrings("v@:i", &enc1);
+    try testing.expectEqualStrings("i#:[4f]", &enc2);
+    try testing.expectEqualStrings("{Point=dd}@:", &enc3);
+    try testing.expectEqualStrings("@@:^v", &enc4);
+}
+
+test "method: validate method implementation" {
+    const ValidFn = fn (Object, Selector, f64) callconv(.c) bool;
+    validateMethodImplementation(ValidFn);
+    const ValidClassFn = fn (Class, Selector) callconv(.c) void;
+    validateMethodImplementation(ValidClassFn);
+}
+
+test "corpus: parse runtime methods, properties, and ivars" {
+    const allocator = testing.allocator;
+    const class = raw.runtime.objc_getClass("NSObject") orelse return error.ClassNotLoaded;
+
+    var method_count: c_uint = 0;
+    const methods = raw.runtime.class_copyMethodList(class, &method_count);
+    defer if (methods) |list| std.c.free(@ptrCast(list));
+
+    var parsed_method_count: usize = 0;
+    if (methods) |list| {
+        for (0..method_count) |index| {
+            const encoding = raw.runtime.method_getTypeEncoding(list[index]) orelse continue;
+            if (encoding[0] == 0) continue;
+            var sig = try parseMethod(allocator, std.mem.span(encoding));
+            defer sig.deinit(allocator);
+            parsed_method_count += 1;
+        }
+    }
+    try testing.expect(parsed_method_count > 10);
+
+    var property_count: c_uint = 0;
+    const properties = raw.runtime.class_copyPropertyList(class, &property_count);
+    defer if (properties) |list| std.c.free(@ptrCast(list));
+    var parsed_property_count: usize = 0;
+    if (properties) |list| {
+        for (0..property_count) |index| {
+            const attributes = raw.runtime.property_getAttributes(list[index]) orelse continue;
+            var parsed = try @import("property.zig").parseProperty(allocator, std.mem.span(attributes));
+            defer parsed.deinit(allocator);
+            parsed_property_count += 1;
+        }
+    }
+    try testing.expect(parsed_property_count > 0);
+}
+
+test "corpus: parse Foundation class metadata when available" {
+    const allocator = testing.allocator;
+    const class_names = [_][*:0]const u8{ "NSString", "NSArray", "NSDictionary" };
+
+    for (class_names) |name| {
+        const class = raw.runtime.objc_getClass(name) orelse continue;
+
+        var method_count: c_uint = 0;
+        const methods = raw.runtime.class_copyMethodList(class, &method_count);
+        defer if (methods) |list| std.c.free(@ptrCast(list));
+        if (methods) |list| {
+            for (0..method_count) |index| {
+                const encoding = raw.runtime.method_getTypeEncoding(list[index]) orelse continue;
+                var parsed = try parseMethod(allocator, std.mem.span(encoding));
+                defer parsed.deinit(allocator);
+            }
+        }
+
+        var property_count: c_uint = 0;
+        const properties = raw.runtime.class_copyPropertyList(class, &property_count);
+        defer if (properties) |list| std.c.free(@ptrCast(list));
+        if (properties) |list| {
+            for (0..property_count) |index| {
+                const attributes = raw.runtime.property_getAttributes(list[index]) orelse continue;
+                var parsed = try @import("property.zig").parseProperty(allocator, std.mem.span(attributes));
+                defer parsed.deinit(allocator);
+            }
+        }
+
+        var ivar_count: c_uint = 0;
+        const ivars = raw.runtime.class_copyIvarList(class, &ivar_count);
+        defer if (ivars) |list| std.c.free(@ptrCast(list));
+        if (ivars) |list| {
+            for (0..ivar_count) |index| {
+                const encoding = raw.runtime.ivar_getTypeEncoding(list[index]) orelse continue;
+                var parsed = try @import("parser.zig").parse(allocator, std.mem.span(encoding));
+                defer parsed.deinit(allocator);
+            }
+        }
+    }
+}
+
+test "method: live runtime initializer encoding parses cleanly" {
+    const class = raw.runtime.objc_getClass("NSObject") orelse return error.ClassNotLoaded;
+    const method = raw.runtime.class_getInstanceMethod(class, raw.objc.sel_registerName("init"));
+    const encoding = raw.runtime.method_getTypeEncoding(method) orelse return error.MethodNotFound;
+    var sig = try parseMethod(testing.allocator, std.mem.span(encoding));
+    defer sig.deinit(testing.allocator);
+    try testing.expect(sig.return_type.type == .object);
+    try testing.expect(sig.arguments.len >= 2);
 }

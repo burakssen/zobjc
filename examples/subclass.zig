@@ -1,7 +1,7 @@
 //! Example demonstrating dynamic class creation and method overriding.
 
 const std = @import("std");
-const objc = @import("objc");
+const objc = @import("zobjc");
 
 pub fn main() void {
     const NSObject = objc.getClass("NSObject") orelse return;
@@ -10,21 +10,17 @@ pub fn main() void {
     _ = MyClass.replaceMethod(objc.sel("description"), objc.Imp.fromRawNonNull(@ptrCast(&struct {
         fn customDescription(target: objc.raw.id, sel_val: objc.raw.SEL) callconv(.c) objc.raw.id {
             _ = sel_val;
-            _ = target;
-            const NSString = objc.getClass("NSString").?;
-            return NSString.msgSend(objc.Object, "stringWithUTF8String:", .{"Greetings from custom subclass!"}).toRaw();
+            return target;
         }
     }.customDescription)), "@:@");
 
     objc.registerClassPair(MyClass);
     defer objc.disposeClassPair(MyClass);
 
-    const instance = MyClass.msgSend(objc.Object, "alloc", .{})
-        .msgSend(objc.Object, "init", .{});
-    defer instance.msgSend(void, "dealloc", .{});
+    const instance = MyClass.send(objc.Object, "alloc", .{})
+        .send(objc.Object, "init", .{});
+    defer instance.send(void, "dealloc", .{});
 
-    const desc = instance.msgSend(objc.Object, "description", .{});
-    const utf8 = desc.getProperty([*c]const u8, "UTF8String");
-
-    std.debug.print("Subclass description: {s}\n", .{std.mem.span(utf8)});
+    const desc = instance.send(objc.Object, "description", .{});
+    std.debug.print("Subclass description returned an {s} instance\n", .{desc.className()});
 }

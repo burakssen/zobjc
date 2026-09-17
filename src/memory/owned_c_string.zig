@@ -5,6 +5,8 @@
 //! Frees the string with `free()` upon `deinit()`.
 
 const std = @import("std");
+const testing = std.testing;
+const objc = @import("zobjc");
 const c_free = @import("c_free.zig");
 
 /// A wrapper owning a null-terminated C string allocated by the Objective-C runtime.
@@ -46,3 +48,52 @@ pub const OwnedCString = struct {
         return p;
     }
 };
+
+test "OwnedCString: method.copyReturnType" {
+    const method = objc.requireClass("NSObject").instanceMethod(objc.sel("description")).?;
+    var ret_type = method.copyReturnType().?;
+    defer ret_type.deinit();
+    try testing.expectEqualStrings("@", ret_type.slice());
+    try testing.expectEqual(@as(usize, 1), ret_type.len());
+    ret_type.deinit();
+    try testing.expectEqual(@as(usize, 0), ret_type.len());
+}
+
+test "OwnedCString: method.copyArgumentType" {
+    const method = objc.requireClass("NSObject").instanceMethod(objc.sel("isEqual:")).?;
+    var arg0 = method.copyArgumentType(0).?;
+    defer arg0.deinit();
+    try testing.expectEqualStrings("@", arg0.slice());
+    var arg1 = method.copyArgumentType(1).?;
+    defer arg1.deinit();
+    try testing.expectEqualStrings(":", arg1.slice());
+    var arg2 = method.copyArgumentType(2).?;
+    defer arg2.deinit();
+    try testing.expectEqualStrings("@", arg2.slice());
+    try testing.expect(method.copyArgumentType(99) == null);
+}
+
+test "OwnedCString: property.copyAttributeValue" {
+    const NSObject = objc.requireClass("NSObject");
+    if (NSObject.property("className")) |prop| {
+        if (prop.copyAttributeValue("T")) |val| {
+            var owned = val;
+            defer owned.deinit();
+            try testing.expect(owned.len() > 0);
+        }
+    }
+}
+
+test "OwnedCString: intoRaw relinquishes ownership" {
+    const method = objc.requireClass("NSObject").instanceMethod(objc.sel("description")).?;
+    var ret_type = method.copyReturnType().?;
+    const raw_ptr = ret_type.intoRaw();
+    try testing.expectEqual(@as(usize, 0), ret_type.len());
+    ret_type.deinit();
+    try testing.expectEqualStrings("@", std.mem.span(raw_ptr));
+    std.c.free(@ptrCast(raw_ptr));
+}
+
+test "OwnedCString: empty fromRaw(null)" {
+    try testing.expect(OwnedCString.fromRaw(null) == null);
+}

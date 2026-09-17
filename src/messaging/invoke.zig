@@ -4,8 +4,10 @@
 //! reusing the unified argument normalization and return conversion pipeline.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const runtime = @import("../runtime/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
+const runtime = @import("runtime");
 const Method = runtime.Method;
 const Imp = runtime.Imp;
 const receiver_mod = @import("receiver.zig");
@@ -17,7 +19,7 @@ const function_type = @import("function_type.zig");
 const dispatch = @import("dispatch.zig");
 const call_mod = @import("internal/call.zig");
 
-// ponytail: Reuses unified argument and return normalization for method and IMP calls.
+// Reuses unified argument and return normalization for method and IMP calls.
 
 /// Directly invokes `method` on `receiver` with tuple `args`.
 pub inline fn invoke(
@@ -72,4 +74,41 @@ pub inline fn callImp(
     const raw_result = call_mod.call(Fn, fn_ptr, call_args);
 
     return returns_mod.fromAbi(Return, raw_result);
+}
+
+test "invoke: Method.invoke matches objc.send" {
+    const ABIFixture = objc.getClass("ABIFixture").?;
+    const inst = objc.send(objc.Object, ABIFixture, "new", .{});
+    defer inst.send(void, "release", .{});
+
+    const method = ABIFixture.instanceMethod(objc.sel("returnInt")).?;
+    const val = method.invoke(c_int, inst, .{});
+    try testing.expectEqual(@as(c_int, 42), val);
+
+    const send_val = objc.send(c_int, inst, "returnInt", .{});
+    try testing.expectEqual(send_val, val);
+}
+
+test "invoke: callImp directly invokes IMP function pointer" {
+    const ABIFixture = objc.getClass("ABIFixture").?;
+    const inst = objc.send(objc.Object, ABIFixture, "new", .{});
+    defer inst.send(void, "release", .{});
+
+    const method = ABIFixture.instanceMethod(objc.sel("returnInt")).?;
+    const imp = method.implementation();
+    const val = objc.callImp(c_int, imp, inst, objc.sel("returnInt"), .{});
+    try testing.expectEqual(@as(c_int, 42), val);
+}
+
+test "differential: Method.invoke agrees with ordinary message dispatch" {
+    const ABIFixture = objc.getClass("ABIFixture").?;
+    const fixture = objc.send(objc.Object, ABIFixture, "alloc", .{}).send(objc.Object, "init", .{});
+    defer fixture.send(void, "dealloc", .{});
+
+    const method = ABIFixture.instanceMethod(objc.sel("echoInt:")).?;
+    const res1 = fixture.send(c_int, "echoInt:", .{@as(c_int, 123)});
+    const res2 = method.invoke(c_int, fixture, .{@as(c_int, 123)});
+
+    try testing.expectEqual(res1, res2);
+    try testing.expectEqual(@as(c_int, 123), res2);
 }

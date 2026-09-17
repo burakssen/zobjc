@@ -4,7 +4,9 @@
 //! method implementation. Cannot be invoked directly without explicit casting via `as(F)`.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 
 pub const Imp = struct {
     ptr: *const fn () callconv(.c) void,
@@ -52,3 +54,14 @@ pub const Imp = struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.IMP));
     }
 };
+
+test "conversion: Imp fromRaw and toRaw roundtrip" {
+    const imp = objc.requireClass("NSObject").methodImplementation(objc.sel("init")).?;
+    try testing.expect(imp.eql(Imp.fromRaw(imp.toRaw()).?));
+    try testing.expectEqual(@as(?Imp, null), Imp.fromRaw(null));
+}
+
+test "handle: Imp is pointer-sized and pointer-aligned" {
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Imp));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Imp));
+}

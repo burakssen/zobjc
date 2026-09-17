@@ -3,9 +3,11 @@
 //! A non-owning, non-null handle to an Objective-C instance variable (`Ivar`).
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const conversion = @import("conversion.zig");
-const encoding = @import("../encoding/root.zig");
+const encoding = @import("encoding");
 
 pub const Ivar = struct {
     ptr: *raw.objc_ivar,
@@ -29,11 +31,6 @@ pub const Ivar = struct {
     /// Returns the name of the instance variable.
     pub inline fn name(self: Ivar) ?[:0]const u8 {
         return conversion.spanNullableCString(raw.runtime.ivar_getName(self.ptr));
-    }
-
-    /// Alias for name() to match naming parity.
-    pub inline fn getName(self: Ivar) ?[:0]const u8 {
-        return self.name();
     }
 
     /// Returns the type encoding string of the instance variable.
@@ -62,3 +59,34 @@ pub const Ivar = struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.Ivar));
     }
 };
+
+test "ivar: dynamic class ivar introspection" {
+    const NSObject = objc.requireClass("NSObject");
+    const Subclass = objc.allocateClassPair(NSObject, "IvarTestClass").?;
+
+    _ = Subclass.addIvar("test_int", @sizeOf(i32), @truncate(std.math.log2(@alignOf(i32))), "i");
+    _ = Subclass.addIvar("test_ptr", @sizeOf(objc.raw.id), @truncate(std.math.log2(@alignOf(objc.raw.id))), "@");
+
+    objc.registerClassPair(Subclass);
+    defer objc.disposeClassPair(Subclass);
+
+    const ivar_int = Subclass.instanceIvar("test_int").?;
+    const ivar_ptr = Subclass.instanceIvar("test_ptr").?;
+    try testing.expectEqualStrings("test_int", ivar_int.name().?);
+    try testing.expectEqualStrings("test_ptr", ivar_ptr.name().?);
+    try testing.expectEqualStrings("i", ivar_int.typeEncoding().?);
+    try testing.expectEqualStrings("@", ivar_ptr.typeEncoding().?);
+
+    const off_int = ivar_int.offset();
+    const off_ptr = ivar_ptr.offset();
+    try testing.expect(off_int >= 0);
+    try testing.expect(off_ptr >= 0);
+    try testing.expect(off_int != off_ptr);
+    try testing.expect(ivar_int.eql(ivar_int));
+    try testing.expect(!ivar_int.eql(ivar_ptr));
+}
+
+test "conversion: Ivar handle is pointer-sized and pointer-aligned" {
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Ivar));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Ivar));
+}

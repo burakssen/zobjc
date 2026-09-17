@@ -4,8 +4,8 @@
 //! _Block_object_assign / _Block_object_dispose with BLOCK_FIELD_IS_OBJECT.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const Object = @import("../runtime/object.zig").Object;
+const raw = @import("raw");
+const Object = @import("runtime").Object;
 
 /// Type-safe strong object capture wrapper for Apple Blocks.
 pub fn Strong(comptime T: type) type {
@@ -78,7 +78,7 @@ pub fn Strong(comptime T: type) type {
 }
 
 test "Strong(Object) wrapper" {
-    const NSObject = Object.fromRaw(@ptrCast(raw.runtime.objc_getClass("NSObject").?));
+    const NSObject = Object.fromRaw(@ptrCast(raw.runtime.objc_getClass("NSObject").?)).?;
     const strong = Strong(Object).init(NSObject);
     try std.testing.expect(strong.rawPtr() != null);
     const borrowed = strong.borrow();

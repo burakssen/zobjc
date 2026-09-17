@@ -1,6 +1,6 @@
-//! Internal conversion bridge reusing Phase 6 messaging normalization.
+//! Internal conversion bridge reusing messaging normalization.
 
-const messaging = @import("../../messaging/root.zig");
+const messaging = @import("messaging");
 
 pub const toAbi = messaging.toAbi;
 pub const fromAbi = messaging.fromAbi;

@@ -6,12 +6,12 @@
 //! - Supports explicit `objc_type_encoding` and `objc_encoding_name` overrides.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const Object = @import("../runtime/object.zig").Object;
-const Class = @import("../runtime/class.zig").Class;
-const Selector = @import("../runtime/selector.zig").Selector;
-const Imp = @import("../runtime/imp.zig").Imp;
-const Protocol = @import("../runtime/protocol.zig").Protocol;
+const raw = @import("raw");
+const Object = @import("runtime").Object;
+const Class = @import("runtime").Class;
+const Selector = @import("runtime").Selector;
+const Imp = @import("runtime").Imp;
+const Protocol = @import("runtime").Protocol;
 
 /// Determines whether `T` is valid for Objective-C type encoding.
 pub fn isObjCEncodable(comptime T: type) bool {

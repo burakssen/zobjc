@@ -1,12 +1,12 @@
 //! Objective-C Block ABI coordination.
 //!
-//! Bridges Darwin ABI return classification (Phase 5) and type encoding (Phase 4)
+//! Bridges Darwin ABI return classification and type encoding
 //! to generate authoritative Block flags, descriptors, and layouts.
 
 const std = @import("std");
-const abi = @import("../abi/root.zig");
-const messaging = @import("../messaging/root.zig");
-const raw = @import("../raw/root.zig");
+const abi = @import("abi");
+const messaging = @import("messaging");
+const raw = @import("raw");
 const flags_mod = @import("flags.zig");
 const descriptor_mod = @import("descriptor.zig");
 const layout_mod = @import("layout.zig");
@@ -25,7 +25,7 @@ pub const blockSignature = signature_mod.blockSignature;
 pub fn usesStret(comptime Return: type) bool {
     const AbiReturn = messaging.AbiReturnType(Return);
     const convention = abi.returnConvention(AbiReturn);
-    // // ponytail: strictly derived from Phase 5 ABI return classification; never checks @typeInfo(Return) == .@"struct"
+    // // strictly derived from ABI return classification; never checks @typeInfo(Return) == .@"struct"
     return convention == .stret;
 }
 

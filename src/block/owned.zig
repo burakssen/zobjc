@@ -4,12 +4,16 @@
 //! Releases memory via _Block_release and duplicates ownership via _Block_copy.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const Object = @import("../runtime/object.zig").Object;
+const raw = @import("raw");
+const Object = @import("runtime").Object;
 const block_mod = @import("block.zig");
 const create_mod = @import("create.zig");
 const imp_mod = @import("imp.zig");
 const invoke_mod = @import("invoke.zig");
+const Class = @import("runtime").Class;
+const sel_fn = @import("runtime").sel;
+
+const testing = std.testing;
 
 /// Owning handle for an Apple Block.
 pub fn OwnedBlock(comptime Signature: type) type {
@@ -86,4 +90,56 @@ pub fn OwnedBlock(comptime Signature: type) type {
             return create_mod.fromFunction(Signature, callback);
         }
     };
+}
+
+test "imp: makeImp and method dispatch" {
+    var blk = try OwnedBlock(fn (Object, c_int, c_int) c_int).fromFunction(struct {
+        fn add(_: Object, x: c_int, y: c_int) c_int {
+            return x + y;
+        }
+    }.add);
+    defer blk.deinit();
+
+    var owned_imp = try blk.makeImp();
+    defer owned_imp.deinit();
+    try testing.expect(owned_imp.raw_imp != null);
+    try testing.expect(owned_imp.block() != null);
+
+    const super_cls = Class.fromRaw(raw.runtime.objc_getClass("NSObject")).?;
+    const dynamic_cls = raw.runtime.objc_allocateClassPair(super_cls.toRaw(), "DynamicBlockTestClass", 0).?;
+    defer raw.runtime.objc_disposeClassPair(dynamic_cls);
+
+    const added = raw.runtime.class_addMethod(dynamic_cls, sel_fn("add:and:").toRaw(), owned_imp.borrow().toRaw(), "i@:ii");
+    try testing.expect(added);
+    raw.runtime.objc_registerClassPair(dynamic_cls);
+
+    const cls_handle = Class.fromRaw(dynamic_cls).?;
+    const inst = cls_handle.send(Object, "alloc", .{}).send(Object, "init", .{});
+    defer inst.send(void, "release", .{});
+    try testing.expectEqual(@as(c_int, 42), inst.send(c_int, "add:and:", .{ @as(c_int, 20), @as(c_int, 22) }));
+}
+
+test "differential: Block to IMP bridge lifecycle" {
+    const super_cls = Class.fromRaw(raw.runtime.objc_getClass("NSObject")).?;
+    const cls = raw.runtime.objc_allocateClassPair(super_cls.toRaw(), "BlockImpBridgeTest", 0) orelse return;
+    defer raw.runtime.objc_disposeClassPair(cls);
+
+    var blk = try OwnedBlock(fn (Object, c_int) c_int).fromFunction(struct {
+        fn bridgeFn(self: Object, val: c_int) c_int {
+            _ = self;
+            return val + 100;
+        }
+    }.bridgeFn);
+    defer blk.deinit();
+
+    var owned_imp = try imp_mod.makeImp(blk);
+    defer owned_imp.deinit();
+
+    const sel = sel_fn("bridgeTest:");
+    try testing.expect(Class.fromRaw(cls).?.addMethod(sel, owned_imp.borrow(), "i@:i"));
+    raw.runtime.objc_registerClassPair(cls);
+
+    const inst = Class.fromRaw(cls).?.send(Object, "alloc", .{}).send(Object, "init", .{});
+    defer inst.send(void, "dealloc", .{});
+    try testing.expectEqual(@as(c_int, 142), inst.send(c_int, "bridgeTest:", .{@as(c_int, 42)}));
 }

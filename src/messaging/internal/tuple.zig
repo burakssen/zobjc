@@ -4,7 +4,7 @@
 
 const std = @import("std");
 
-// ponytail: Lean compile-time tuple helpers without allocations.
+// Lean compile-time tuple helpers without allocations.
 
 /// Returns the number of fields in tuple type `T`.
 pub inline fn tupleLen(comptime T: type) usize {

@@ -1,7 +1,9 @@
 //! Typed Objective-C property attribute representation.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 
 /// Describes an Objective-C property attribute (e.g. "T", "R", "C", "N", "V_ivar").
 /// Exactly matches the ABI layout of `raw.objc_property_attribute_t`.
@@ -29,3 +31,8 @@ pub const PropertyAttribute = extern struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.objc_property_attribute_t));
     }
 };
+
+test "handle: PropertyAttribute matches raw C layout exactly" {
+    try testing.expectEqual(@sizeOf(raw.objc_property_attribute_t), @sizeOf(PropertyAttribute));
+    try testing.expectEqual(@alignOf(raw.objc_property_attribute_t), @alignOf(PropertyAttribute));
+}

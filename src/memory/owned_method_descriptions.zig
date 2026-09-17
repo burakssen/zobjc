@@ -4,8 +4,10 @@
 //! Frees the array buffer with `free()` upon `deinit()`.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const MethodDescription = @import("../runtime/method_description.zig").MethodDescription;
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
+const MethodDescription = @import("runtime").MethodDescription;
 const c_free = @import("c_free.zig");
 
 /// An owning wrapper for an array of `raw.objc_method_description` records.
@@ -72,3 +74,25 @@ pub const OwnedMethodDescriptions = struct {
         }
     }
 };
+
+test "OwnedMethodDescriptions: protocol.methodDescriptions" {
+    const proto = objc.getProtocol("NSObject").?;
+    var req_methods = proto.methodDescriptions(.{ .required = true, .instance = true });
+    defer req_methods.deinit();
+    try testing.expect(!req_methods.isEmpty());
+    try testing.expect(req_methods.count() > 0);
+    try testing.expect(req_methods.get(0).?.selector.?.name().len > 0);
+
+    var count: usize = 0;
+    var iter = req_methods.iterator();
+    while (iter.next()) |_| count += 1;
+    try testing.expectEqual(req_methods.count(), count);
+}
+
+test "OwnedMethodDescriptions: empty representation" {
+    var empty_methods = OwnedMethodDescriptions.empty();
+    try testing.expect(empty_methods.isEmpty());
+    try testing.expectEqual(@as(usize, 0), empty_methods.count());
+    try testing.expect(empty_methods.get(0) == null);
+    empty_methods.deinit();
+}

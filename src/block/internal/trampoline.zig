@@ -5,12 +5,12 @@
 //! and normalizes the return value to ABI representation.
 
 const std = @import("std");
-const raw = @import("../../raw/root.zig");
+const raw = @import("raw");
 const convert = @import("convert.zig");
 const literal_mod = @import("literal.zig");
-const Object = @import("../../runtime/object.zig").Object;
-const Class = @import("../../runtime/class.zig").Class;
-const Selector = @import("../../runtime/selector.zig").Selector;
+const Object = @import("runtime").Object;
+const Class = @import("runtime").Class;
+const Selector = @import("runtime").Selector;
 
 pub fn InvokeTrampoline(
     comptime Signature: type,
@@ -36,7 +36,7 @@ pub fn InvokeTrampoline(
             return convert.toAbi(ret_val);
         }
 
-        // // ponytail: fixed-arity static dispatcher for 0..8 block arguments
+        // // fixed-arity static dispatcher for 0..8 block arguments
         pub const Runner = switch (params.len) {
             0 => struct {
                 pub fn trampoline(raw_block: *anyopaque) callconv(.c) AbiRet {

@@ -3,9 +3,10 @@
 //! Isolates Zig compiler function-type reflection (@Fn) in a single module.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const raw = @import("raw");
 
-// ponytail: Isolate compiler-specific @Fn reflection in this module only.
+// Isolate compiler-specific @Fn reflection in this module only.
 
 /// Generates the exact non-variadic C function type for an ordinary message dispatch.
 ///
@@ -63,4 +64,48 @@ pub fn MethodInvokeFunctionType(comptime AbiReturn: type, comptime AbiArgsTuple:
 /// Shape: `fn (raw.id, raw.SEL, AbiArgs...) callconv(.c) AbiReturn`
 pub fn ImpFunctionType(comptime AbiReturn: type, comptime AbiArgsTuple: type) type {
     return MessageFunctionType(AbiReturn, AbiArgsTuple);
+}
+
+test "function_type: message signature structure" {
+    const AbiArgsTuple = struct { c_int, f64, [*:0]const u8 };
+    const Fn = MessageFunctionType(raw.id, AbiArgsTuple);
+    const info = @typeInfo(Fn).@"fn";
+
+    try testing.expectEqual(std.builtin.CallingConvention.c, info.calling_convention);
+    try testing.expectEqual(raw.id, info.return_type.?);
+    try testing.expectEqual(@as(usize, 5), info.params.len);
+
+    try testing.expectEqual(raw.id, info.params[0].type.?);
+    try testing.expectEqual(raw.SEL, info.params[1].type.?);
+    try testing.expectEqual(c_int, info.params[2].type.?);
+    try testing.expectEqual(f64, info.params[3].type.?);
+    try testing.expectEqual([*:0]const u8, info.params[4].type.?);
+}
+
+test "function_type: super signature structure" {
+    const AbiArgsTuple = struct { usize };
+    const Fn = SuperFunctionType(void, AbiArgsTuple);
+    const info = @typeInfo(Fn).@"fn";
+
+    try testing.expectEqual(std.builtin.CallingConvention.c, info.calling_convention);
+    try testing.expectEqual(void, info.return_type.?);
+    try testing.expectEqual(@as(usize, 3), info.params.len);
+
+    try testing.expectEqual(*raw.objc_super, info.params[0].type.?);
+    try testing.expectEqual(raw.SEL, info.params[1].type.?);
+    try testing.expectEqual(usize, info.params[2].type.?);
+}
+
+test "function_type: method_invoke signature structure" {
+    const AbiArgsTuple = struct { c_int };
+    const Fn = MethodInvokeFunctionType(c_int, AbiArgsTuple);
+    const info = @typeInfo(Fn).@"fn";
+
+    try testing.expectEqual(std.builtin.CallingConvention.c, info.calling_convention);
+    try testing.expectEqual(c_int, info.return_type.?);
+    try testing.expectEqual(@as(usize, 3), info.params.len);
+
+    try testing.expectEqual(raw.id, info.params[0].type.?);
+    try testing.expectEqual(raw.Method, info.params[1].type.?);
+    try testing.expectEqual(c_int, info.params[2].type.?);
 }

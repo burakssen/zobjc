@@ -1,6 +1,6 @@
 //! Central runtime messenger entry point selection.
 //!
-//! Maps Phase 5 ABI classification decisions to the exact libobjc dispatch entry point:
+//! Maps ABI classification decisions to the exact libobjc dispatch entry point:
 //! - objc_msgSend
 //! - objc_msgSend_stret
 //! - objc_msgSend_fpret
@@ -11,10 +11,10 @@
 //! - method_invoke_stret
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const abi = @import("../abi/root.zig");
+const raw = @import("raw");
+const abi = @import("abi");
 
-// ponytail: Pure routing based strictly on Phase 5 ABI ReturnConvention.
+// Pure routing based strictly on ABI ReturnConvention.
 
 /// Returns the untyped function pointer for an ordinary instance/class message send.
 pub inline fn messagePointer(comptime AbiReturn: type) *const anyopaque {

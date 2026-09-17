@@ -3,7 +3,7 @@
 const std = @import("std");
 
 /// Verifies that a type is safe to pass across the C ABI.
-// ponytail: Leverage Zig's builtin @typeInfo to check ABI compatibility.
+// Leverage Zig's builtin @typeInfo to check ABI compatibility.
 pub fn assertCAbiCompatible(comptime T: type) void {
     switch (@typeInfo(T)) {
         .int, .float, .bool, .void => {},

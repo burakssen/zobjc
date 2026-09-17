@@ -1,6 +1,6 @@
 //! Comptime integer and layout arithmetic helpers.
 
-// ponytail: Pure, non-allocating compile-time arithmetic.
+// Pure, non-allocating compile-time arithmetic.
 
 /// Aligns `offset` forward to the next multiple of `alignment`.
 pub fn alignForward(offset: usize, alignment: usize) usize {

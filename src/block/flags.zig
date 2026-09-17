@@ -3,7 +3,8 @@
 //! Generates bitfield flags according to Apple libclosure / Clang Blocks ABI rules.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
+const abi_mod = @import("abi.zig");
 
 /// Semantic description of a Block's compiler-generated capabilities.
 pub const BlockFlags = struct {
@@ -42,4 +43,34 @@ test "BlockFlags: bitfield serialization" {
         .extended_layout = true,
     };
     try std.testing.expectEqual(@as(c_int, @bitCast(@as(u32, 0xc2000000))), flags_helpers.bits());
+}
+
+test "flags: BlockFlags builder" {
+    const f1 = BlockFlags{
+        .global = true,
+        .signature = true,
+    };
+    try std.testing.expectEqual(@as(c_int, raw.blocks.BLOCK_IS_GLOBAL | raw.blocks.BLOCK_HAS_SIGNATURE), f1.bits());
+
+    const f2 = BlockFlags{
+        .copy_dispose = true,
+        .signature = true,
+        .stret = true,
+    };
+    try std.testing.expectEqual(@as(c_int, raw.blocks.BLOCK_HAS_COPY_DISPOSE | raw.blocks.BLOCK_HAS_SIGNATURE | raw.blocks.BLOCK_USE_STRET), f2.bits());
+}
+
+test "flags: BLOCK_USE_STRET derivation" {
+    try std.testing.expect(!abi_mod.usesStret(void));
+    try std.testing.expect(!abi_mod.usesStret(c_int));
+    try std.testing.expect(!abi_mod.usesStret(f64));
+    try std.testing.expect(!abi_mod.usesStret(c_longdouble));
+
+    const Small = extern struct { x: f64, y: f64 };
+    try std.testing.expect(!abi_mod.usesStret(Small));
+
+    const Large = extern struct { a: u64, b: u64, c: u64 };
+    if (@import("builtin").target.cpu.arch == .aarch64) {
+        try std.testing.expect(!abi_mod.usesStret(Large));
+    }
 }

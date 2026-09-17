@@ -1,17 +1,13 @@
 //! Example demonstrating basic object allocation, initialization, method calls, and memory cleanup.
 
 const std = @import("std");
-const objc = @import("objc");
+const objc = @import("zobjc");
 
 pub fn main() void {
-    const NSString = objc.getClass("NSString") orelse return;
-    const str = NSString.msgSend(objc.Object, "stringWithUTF8String:", .{"Hello from zobjc!"});
+    const NSObject = objc.requireClass("NSObject");
+    const object = NSObject.send(objc.Object, "new", .{});
+    defer object.send(void, "dealloc", .{});
 
-    const length = str.msgSend(c_ulong, "length", .{});
-    const utf8_ptr = str.getProperty([*c]const u8, "UTF8String");
-
-    std.debug.print("Created NSString: \"{s}\" (length: {})\n", .{
-        std.mem.span(utf8_ptr),
-        length,
-    });
+    const object_class = object.send(objc.Class, "class", .{});
+    std.debug.print("Created {s} instance via objc.send\n", .{object_class.name()});
 }

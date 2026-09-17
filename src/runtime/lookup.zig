@@ -3,10 +3,12 @@
 //! Provides type-safe lookups returning `Class` and `Protocol` handles.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const Class = @import("class.zig").Class;
 const Protocol = @import("protocol.zig").Protocol;
-const memory = @import("../memory/root.zig");
+const memory = @import("memory");
 
 /// Looks up a class by name, returning null if not found.
 pub inline fn getClass(name: [:0]const u8) ?Class {
@@ -94,4 +96,52 @@ pub fn classNamesForImage(image: [:0]const u8) ?memory.OwnedCStringList {
         return memory.OwnedCStringList.fromRaw(l, count_val);
     }
     return null;
+}
+
+test "lookup: getClass and lookupClass" {
+    const cls1 = getClass("NSObject");
+    try testing.expect(cls1 != null);
+    try testing.expectEqualStrings("NSObject", cls1.?.name());
+
+    const cls2 = lookupClass("NSObject");
+    try testing.expect(cls2 != null);
+    try testing.expect(cls1.?.eql(cls2.?));
+
+    try testing.expectEqual(@as(?Class, null), getClass("NonExistentClass98765"));
+    try testing.expectEqual(@as(?Class, null), lookupClass("NonExistentClass98765"));
+}
+
+test "lookup: requireClass" {
+    const cls = requireClass("NSObject");
+    try testing.expectEqualStrings("NSObject", cls.name());
+}
+
+test "lookup: getMetaClass" {
+    const meta = getMetaClass("NSObject");
+    try testing.expect(meta != null);
+    try testing.expect(meta.?.isMetaClass());
+    try testing.expectEqual(@as(?Class, null), getMetaClass("NonExistentMetaClass98765"));
+}
+
+test "lookup: getProtocol" {
+    const proto = getProtocol("NSObject");
+    try testing.expect(proto != null);
+    try testing.expectEqualStrings("NSObject", proto.?.name());
+    try testing.expectEqual(@as(?Protocol, null), getProtocol("NonExistentProtocol98765"));
+}
+
+test "runtime: class lookup and metaclass lookup" {
+    const NSObject = getClass("NSObject");
+    try testing.expect(NSObject != null);
+    try testing.expect(getClass("NonExistent_Class_404") == null);
+
+    const meta = getMetaClass("NSObject");
+    try testing.expect(meta != null);
+    try testing.expect(meta.?.isMetaClass());
+    try testing.expect(!NSObject.?.isMetaClass());
+}
+
+test "runtime: protocol lookup" {
+    const obj_proto = getProtocol("NSObject") orelse return error.ProtocolNotFound;
+    try testing.expectEqualStrings("NSObject", obj_proto.name());
 }

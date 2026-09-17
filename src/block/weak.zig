@@ -4,8 +4,8 @@
 //! _Block_object_assign / _Block_object_dispose with BLOCK_FIELD_IS_WEAK | BLOCK_FIELD_IS_OBJECT.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const Object = @import("../runtime/object.zig").Object;
+const raw = @import("raw");
+const Object = @import("runtime").Object;
 
 /// Type-safe weak object capture wrapper for Apple Blocks.
 pub fn Weak(comptime T: type) type {

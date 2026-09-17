@@ -1,4 +1,4 @@
-//! Example demonstrating Phase 3 Ownership and Lifetime Abstractions.
+//! Example demonstrating Ownership and Lifetime Abstractions.
 //!
 //! Covers:
 //! - Retained(T): explicit strong reference ownership
@@ -8,7 +8,7 @@
 //! - OwnedCString: runtime-allocated C strings
 
 const std = @import("std");
-const objc = @import("objc");
+const objc = @import("zobjc");
 
 pub fn main() void {
     // 1. Scoped Autorelease Pool
@@ -20,8 +20,8 @@ pub fn main() void {
     // 2. Strong Ownership with Retained(T)
     std.debug.print("--- Retained(T) Demo ---\n", .{});
     {
-        const raw_obj = NSObject.msgSend(objc.Object, "alloc", .{})
-            .msgSend(objc.Object, "init", .{});
+        const raw_obj = NSObject.send(objc.Object, "alloc", .{})
+            .send(objc.Object, "init", .{});
 
         // Adopt newly allocated object into Retained
         var strong = objc.Retained(objc.Object).adopt(raw_obj);
@@ -42,8 +42,8 @@ pub fn main() void {
         defer weak.deinit();
 
         {
-            const inner_raw = NSObject.msgSend(objc.Object, "alloc", .{})
-                .msgSend(objc.Object, "init", .{});
+            const inner_raw = NSObject.send(objc.Object, "alloc", .{})
+                .send(objc.Object, "init", .{});
             var inner_strong = objc.Retained(objc.Object).adopt(inner_raw);
 
             // Initialize weak reference in-place
@@ -75,7 +75,7 @@ pub fn main() void {
 
         std.debug.print("NSObject has {d} instance methods.\n", .{methods.count()});
         if (methods.get(0)) |first_method| {
-            std.debug.print("First method selector: {s}\n", .{first_method.getName().getName()});
+            std.debug.print("First method selector: {s}\n", .{first_method.selector().name()});
 
             // 5. Runtime-Allocated C String with OwnedCString
             if (first_method.copyReturnType()) |ret_type| {

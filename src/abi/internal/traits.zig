@@ -1,10 +1,10 @@
 //! Comptime type predicates for ABI classification.
 
 const std = @import("std");
-const raw = @import("../../raw/root.zig");
-const runtime = @import("../../runtime/root.zig");
+const raw = @import("raw");
+const runtime = @import("runtime");
 
-// ponytail: Use pure comptime @typeInfo inspection without external dependencies.
+// Use pure comptime @typeInfo inspection without external dependencies.
 
 /// Returns true if T is an integer or bool type.
 pub fn isInteger(comptime T: type) bool {

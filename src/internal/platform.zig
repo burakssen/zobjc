@@ -5,7 +5,7 @@
 
 const builtin = @import("builtin");
 
-// ponytail: Use builtin target info directly without custom wrappers.
+// Use builtin target info directly without custom wrappers.
 pub const is_darwin = builtin.os.tag.isDarwin();
 pub const os = builtin.os.tag;
 pub const arch = builtin.cpu.arch;

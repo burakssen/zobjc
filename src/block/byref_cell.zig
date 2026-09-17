@@ -3,7 +3,7 @@
 //! Mirrors Apple libclosure's `struct Block_byref` and `struct Block_byref_2`.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 const traits_mod = @import("capture_traits.zig");
 
 /// Low-level memory layout for a __block (byref) cell storing value of type `T`.

@@ -1,15 +1,15 @@
 //! Compile-time argument, return type, and selector validation for Objective-C messaging.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
-const runtime = @import("../runtime/root.zig");
+const raw = @import("raw");
+const runtime = @import("runtime");
 const receiver_mod = @import("receiver.zig");
 const selector_mod = @import("selector.zig");
 const arguments_mod = @import("arguments.zig");
 const returns_mod = @import("returns.zig");
-const encoding = @import("../encoding/root.zig");
+const encoding = @import("encoding");
 
-// ponytail: Strict compile-time validation with actionable diagnostics.
+// Strict compile-time validation with actionable diagnostics.
 
 /// Asserts that `Args` is a tuple.
 pub fn assertArgumentTuple(comptime Args: type) void {

@@ -3,12 +3,14 @@
 //! A non-owning, non-null handle to an Objective-C protocol (`Protocol *`).
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const testing = std.testing;
+const objc = @import("zobjc");
+const raw = @import("raw");
 const conversion = @import("conversion.zig");
 const Selector = @import("selector.zig").Selector;
 const Property = @import("property.zig").Property;
 const MethodDescription = @import("method_description.zig").MethodDescription;
-const memory = @import("../memory/root.zig");
+const memory = @import("memory");
 
 pub const ProtocolMethodOptions = struct {
     required: bool = true,
@@ -116,33 +118,44 @@ pub const Protocol = struct {
         return memory.OwnedRuntimeList(Protocol).fromRaw(@ptrCast(list), count_val);
     }
 
-    // --- Backward Compatibility Aliases ---
-
-    /// Legacy alias for name.
-    pub inline fn getName(self: Protocol) [:0]const u8 {
-        return self.name();
-    }
-
-    /// Legacy alias for conformsTo.
-    pub inline fn conformsToProtocol(self: Protocol, other: Protocol) bool {
-        return self.conformsTo(other);
-    }
-
-    /// Legacy alias for property.
-    pub inline fn getProperty(
-        self: Protocol,
-        prop_name: [:0]const u8,
-        is_required: bool,
-        is_instance: bool,
-    ) ?Property {
-        return self.property(prop_name, .{
-            .required = is_required,
-            .instance = is_instance,
-        });
-    }
-
     comptime {
         std.debug.assert(@sizeOf(@This()) == @sizeOf(raw.Protocol));
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.Protocol));
     }
 };
+
+test "protocol: NSObject protocol introspection" {
+    const proto = objc.getProtocol("NSObject") orelse return error.ProtocolNotFound;
+    try testing.expectEqualStrings("NSObject", proto.name());
+    try testing.expect(proto.eql(objc.getProtocol("NSObject").?));
+    try testing.expect(proto.conformsTo(proto));
+
+    const desc = proto.methodDescription(objc.sel("description"), .{
+        .required = true,
+        .instance = true,
+    });
+    try testing.expect(desc != null);
+    try testing.expect(desc.?.selector != null);
+    try testing.expect(desc.?.selector.?.eql(objc.sel("description")));
+
+    try testing.expectEqual(
+        @as(?objc.MethodDescription, null),
+        proto.methodDescription(objc.sel("nonExistentSelector123"), .{}),
+    );
+}
+
+test "protocol: requireProtocol succeeds on valid protocol" {
+    const proto = objc.requireProtocol("NSObject");
+    try testing.expectEqualStrings("NSObject", proto.name());
+}
+
+test "conversion: Protocol fromRaw and toRaw roundtrip" {
+    const proto = objc.getProtocol("NSObject").?;
+    try testing.expect(proto.eql(Protocol.fromRaw(proto.toRaw()).?));
+    try testing.expectEqual(@as(?Protocol, null), Protocol.fromRaw(null));
+}
+
+test "handle: Protocol is pointer-sized and pointer-aligned" {
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Protocol));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Protocol));
+}

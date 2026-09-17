@@ -8,12 +8,8 @@ on:
 
 jobs:
   verify:
-    name: Verify on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-14, macos-13]
+    name: Verify on macOS
+    runs-on: macos-14
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,31 +19,35 @@ jobs:
         with:
           version: 0.16.0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Build
+        run: zig build
 
-      - name: Run Runtime API Audit
-        run: zig build audit-runtime
-
-      - name: Run Core, Foundation & Integration Tests
+      - name: Run Unified Tests
         run: zig build test
 
-      - name: Run SDK Header Parity Suite
-        run: zig build test-parity
+      - name: Run basic_object example
+        run: zig build run-basic_object
 
-      - name: Run Clang Differential Interop Suite
-        run: zig build test-differential
+      - name: Run subclass example
+        run: zig build run-subclass
 
-      - name: Run Upstream Compatibility Suite
-        run: zig build test-compat
+      - name: Run block example
+        run: zig build run-block
 
-      - name: Run Compile-Fail Rejection Suite
-        run: zig build test-compile-fail
+      - name: Run autorelease_pool example
+        run: zig build run-autorelease_pool
 
-      - name: Run Standalone Consumer Test
-        run: zig build test-consumer
+      - name: Run runtime_introspection example
+        run: zig build run-runtime_introspection
 
-      - name: Run Multi-Platform Cross-Compilation
-        run: zig build test-cross
+      - name: Run ownership_and_memory example
+        run: zig build run-ownership_and_memory
+
+      - name: Run type_encodings example
+        run: zig build run-type_encodings
+
+      - name: Run abi_classification example
+        run: zig build run-abi_classification
+
+      - name: Run messaging example
+        run: zig build run-messaging

@@ -81,3 +81,7 @@ pub const Swizzle = swizzle.Swizzle;
 pub const ScopedSwizzle = swizzle.ScopedSwizzle;
 pub const MethodReplacement = replacement.MethodReplacement;
 pub const BlockMethodReplacement = replacement.BlockMethodReplacement;
+
+test {
+    @import("std").testing.refAllDecls(@This());
+}

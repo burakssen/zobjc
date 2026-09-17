@@ -6,7 +6,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-// ponytail: Minimal target descriptor matching std.Target fields needed for ABI decisions.
+// Minimal target descriptor matching std.Target fields needed for ABI decisions.
 pub const Target = struct {
     arch: std.Target.Cpu.Arch,
     os: std.Target.Os.Tag,
@@ -59,3 +59,25 @@ pub const Target = struct {
     pub const ios_arm64: Target = .{ .arch = .aarch64, .os = .ios, .abi = .none };
     pub const ios_sim_x86_64: Target = .{ .arch = .x86_64, .os = .ios, .abi = .none };
 };
+
+test "target: native target detection" {
+    try std.testing.expect(Target.native().isSupported());
+}
+
+test "target: explicit Darwin targets are supported" {
+    try std.testing.expect(Target.macos_arm64.isSupported());
+    try std.testing.expect(Target.macos_x86_64.isSupported());
+    try std.testing.expect(Target.ios_arm64.isSupported());
+    try std.testing.expect(Target.ios_sim_x86_64.isSupported());
+}
+
+test "target: non-Darwin targets are rejected" {
+    const linux_x86_64: Target = .{ .arch = .x86_64, .os = .linux, .abi = .gnu };
+    try std.testing.expect(!linux_x86_64.isSupported());
+
+    const windows_x86_64: Target = .{ .arch = .x86_64, .os = .windows, .abi = .msvc };
+    try std.testing.expect(!windows_x86_64.isSupported());
+
+    const darwin_riscv: Target = .{ .arch = .riscv64, .os = .macos, .abi = .none };
+    try std.testing.expect(!darwin_riscv.isSupported());
+}

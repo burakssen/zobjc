@@ -4,7 +4,7 @@
 //! or byref forwarding cells, and determines required copy/dispose helpers and layout metadata.
 
 const std = @import("std");
-const raw = @import("../raw/root.zig");
+const raw = @import("raw");
 
 pub const CaptureCategory = enum {
     trivial,
@@ -155,7 +155,7 @@ fn validateCaptureType(comptime T: type) void {
 
 test "CaptureTraits classification" {
     const strong_mod = @import("strong.zig");
-    const Object = @import("../runtime/object.zig").Object;
+    const Object = @import("runtime").Object;
 
     const IntTraits = CaptureTraits(c_int);
     try std.testing.expectEqual(CaptureCategory.trivial, IntTraits.category);
