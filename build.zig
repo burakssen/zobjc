@@ -86,6 +86,14 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 
     const test_modules = createTestModules(b, target, optimize);
+
+    const integration_tests = b.createModule(.{
+        .root_source_file = b.path("tests/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    integration_tests.addImport("zobjc", zobjc);
+    addIntegrationFixtures(integration_tests, b);
     // raw tests call libobjc directly; link it explicitly now that raw no
     // longer imports the facade (which previously provided it transitively).
     test_modules.raw.linkSystemLibrary("objc", .{});
@@ -112,6 +120,11 @@ pub fn build(b: *std.Build) void {
     };
     const test_step = b.step("test", "Run all zobjc tests");
     addTestFixtures(test_modules.zobjc, b);
+    const integration_test_artifact = b.addTest(.{
+        .name = "test-integration",
+        .root_module = integration_tests,
+    });
+    test_step.dependOn(&b.addRunArtifact(integration_test_artifact).step);
     for (test_targets) |test_target| {
         const tests = b.addTest(.{
             .name = b.fmt("test-{s}", .{test_target.name}),
@@ -263,8 +276,28 @@ fn wireModules(modules: ModuleSet) void {
 fn addBlockTestFixture(module: *std.Build.Module, b: *std.Build) void {
     module.linkSystemLibrary("objc", .{});
     module.addCSourceFile(.{
+        .file = b.path("fixtures/common.m"),
+        .flags = &.{},
+    });
+    module.addCSourceFile(.{
         .file = b.path("fixtures/block.m"),
         .flags = &.{"-fblocks"},
+    });
+}
+
+fn addIntegrationFixtures(module: *std.Build.Module, b: *std.Build) void {
+    module.linkSystemLibrary("objc", .{});
+    module.addCSourceFile(.{
+        .file = b.path("fixtures/encoding.m"),
+        .flags = &.{},
+    });
+    module.addCSourceFile(.{
+        .file = b.path("fixtures/abi.m"),
+        .flags = &.{},
+    });
+    module.addCSourceFile(.{
+        .file = b.path("fixtures/common.m"),
+        .flags = &.{},
     });
 }
 

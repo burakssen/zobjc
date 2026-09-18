@@ -19,6 +19,11 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Extracted the facade integration suite from `src/root.zig` into `tests/`
+  (`architecture`, `encoding`, `abi`, `messaging`, `runtime_memory`), wired
+  as an independent `test-integration` target importing only the public
+  facade; split shared `fixtures/common.m` so Block and integration tests
+  link exactly what they use.
 - Removed the final `block` -> `zobjc` facade dependency. The subsystem
   module graph is now acyclic, with all subsystem dependencies wired
   explicitly downward.

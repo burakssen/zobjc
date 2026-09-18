@@ -73,10 +73,22 @@ facade edges remain anywhere.
 - `src/block/`: Apple Blocks construction, copy/dispose, invocation, IMP
   bridging. arm64e (pointer authentication) fails closed at comptime.
 
+## Test layers
+
+Subsystem unit tests live beside their source and compile against minimal
+module dependencies. Live integration tests live in `tests/` as an
+independent module importing only the public facade:
+
+- `tests/architecture.zig`: process-level invariants.
+- `tests/encoding.zig`: Clang `@encode` differentials and parsing corpus.
+- `tests/abi.zig`: wrapper/raw ABI equivalence on both architectures.
+- `tests/messaging.zig`: live dispatch, super, IMP, and signature checks.
+- `tests/runtime_memory.zig`: runtime introspection and ownership behavior.
+
 ## ABI verification
 
 Differential tests compare Zig behavior against Clang Objective-C fixtures in
-`fixtures/` (`encoding.m`, `abi.m`, `block.m`):
+`fixtures/` (`encoding.m`, `abi.m`, `block.m`, `common.m`):
 
 - `encoding`: `raw.BOOL`, scalars, aggregates vs `@encode`.
 - `messaging`/`abi`: aggregate returns across sizes, register pressure,
