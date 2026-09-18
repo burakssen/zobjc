@@ -19,6 +19,17 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Made the expected `sendChecked` receiver encoding canonical `@` for both
+  instance and class receivers (removed the `#` distinction and
+  `receiverEncodingChar`), and unified method lookup through
+  `object_getClass` + `class_getInstanceMethod` for both receivers, dropping
+  the fallback chain and `receiverIsClass`.
+- Extracted the pure `checkSignatures` comparison with table regression
+  tests covering exact matches, wrong type/arity/return, and fail-open
+  (`skip`) paths.
+- Removed the file-internal `raw` <-> `root.zig` import edges: raw sources
+  now reference local declarations and sibling files directly, with the
+  `BOOL` helper assertions moved to the facade test block.
 - Fixed a misleading `sendChecked` comment claiming some runtime encodings
   (e.g. `+alloc` as `@16@0:8`) omit `_cmd`; `@0` is `self` and `:8` is
   `_cmd`. The check now gates on the standard receiver/selector-first

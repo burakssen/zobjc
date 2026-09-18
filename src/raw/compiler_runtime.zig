@@ -6,7 +6,9 @@
 const types = @import("types.zig");
 const std = @import("std");
 const testing = std.testing;
-const raw = @import("root.zig");
+const runtime = @import("runtime.zig");
+const objc = @import("objc.zig");
+const message = @import("message.zig");
 const id = types.id;
 const Class = types.Class;
 
@@ -97,73 +99,73 @@ pub extern "c" fn objc_addExceptionHandler(fn_ptr: objc_exception_handler, conte
 pub extern "c" fn objc_removeExceptionHandler(token: usize) void;
 
 test "raw.compiler_runtime: retain and release lifecycle" {
-    const cls = raw.runtime.objc_getClass("NSObject");
+    const cls = runtime.objc_getClass("NSObject");
     try testing.expect(cls != null);
 
-    const sel_alloc = raw.objc.sel_registerName("alloc");
-    const sel_init = raw.objc.sel_registerName("init");
+    const sel_alloc = objc.sel_registerName("alloc");
+    const sel_init = objc.sel_registerName("init");
 
-    const AllocFn = *const fn (raw.Class, raw.SEL) callconv(.c) raw.id;
-    const InitFn = *const fn (raw.id, raw.SEL) callconv(.c) raw.id;
+    const AllocFn = *const fn (types.Class, types.SEL) callconv(.c) types.id;
+    const InitFn = *const fn (types.id, types.SEL) callconv(.c) types.id;
 
-    const alloc_fn: AllocFn = @ptrCast(&raw.message.objc_msgSend);
-    const init_fn: InitFn = @ptrCast(&raw.message.objc_msgSend);
+    const alloc_fn: AllocFn = @ptrCast(&message.objc_msgSend);
+    const init_fn: InitFn = @ptrCast(&message.objc_msgSend);
 
     const obj = init_fn(alloc_fn(cls, sel_alloc), sel_init);
     try testing.expect(obj != null);
 
-    const retained = raw.compiler_runtime.objc_retain(obj);
+    const retained = objc_retain(obj);
     try testing.expectEqual(obj, retained);
 
-    raw.compiler_runtime.objc_release(retained);
-    raw.compiler_runtime.objc_release(obj);
+    objc_release(retained);
+    objc_release(obj);
 }
 
 test "raw.compiler_runtime: autorelease pool lifecycle" {
-    const pool = raw.compiler_runtime.objc_autoreleasePoolPush();
+    const pool = objc_autoreleasePoolPush();
     try testing.expect(pool != null);
 
-    const cls = raw.runtime.objc_getClass("NSObject");
-    const sel_alloc = raw.objc.sel_registerName("alloc");
-    const sel_init = raw.objc.sel_registerName("init");
+    const cls = runtime.objc_getClass("NSObject");
+    const sel_alloc = objc.sel_registerName("alloc");
+    const sel_init = objc.sel_registerName("init");
 
-    const AllocFn = *const fn (raw.Class, raw.SEL) callconv(.c) raw.id;
-    const InitFn = *const fn (raw.id, raw.SEL) callconv(.c) raw.id;
+    const AllocFn = *const fn (types.Class, types.SEL) callconv(.c) types.id;
+    const InitFn = *const fn (types.id, types.SEL) callconv(.c) types.id;
 
-    const alloc_fn: AllocFn = @ptrCast(&raw.message.objc_msgSend);
-    const init_fn: InitFn = @ptrCast(&raw.message.objc_msgSend);
+    const alloc_fn: AllocFn = @ptrCast(&message.objc_msgSend);
+    const init_fn: InitFn = @ptrCast(&message.objc_msgSend);
 
     const obj = init_fn(alloc_fn(cls, sel_alloc), sel_init);
     try testing.expect(obj != null);
 
-    _ = raw.compiler_runtime.objc_autorelease(obj);
-    raw.compiler_runtime.objc_autoreleasePoolPop(pool);
+    _ = objc_autorelease(obj);
+    objc_autoreleasePoolPop(pool);
 }
 
 test "raw.compiler_runtime: weak pointer operations" {
-    const cls = raw.runtime.objc_getClass("NSObject");
-    const sel_alloc = raw.objc.sel_registerName("alloc");
-    const sel_init = raw.objc.sel_registerName("init");
+    const cls = runtime.objc_getClass("NSObject");
+    const sel_alloc = objc.sel_registerName("alloc");
+    const sel_init = objc.sel_registerName("init");
 
-    const AllocFn = *const fn (raw.Class, raw.SEL) callconv(.c) raw.id;
-    const InitFn = *const fn (raw.id, raw.SEL) callconv(.c) raw.id;
+    const AllocFn = *const fn (types.Class, types.SEL) callconv(.c) types.id;
+    const InitFn = *const fn (types.id, types.SEL) callconv(.c) types.id;
 
-    const alloc_fn: AllocFn = @ptrCast(&raw.message.objc_msgSend);
-    const init_fn: InitFn = @ptrCast(&raw.message.objc_msgSend);
+    const alloc_fn: AllocFn = @ptrCast(&message.objc_msgSend);
+    const init_fn: InitFn = @ptrCast(&message.objc_msgSend);
 
     const obj = init_fn(alloc_fn(cls, sel_alloc), sel_init);
     try testing.expect(obj != null);
-    defer raw.compiler_runtime.objc_release(obj);
+    defer objc_release(obj);
 
-    var weak_location: raw.id = null;
-    const init_result = raw.compiler_runtime.objc_initWeak(&weak_location, obj);
+    var weak_location: types.id = null;
+    const init_result = objc_initWeak(&weak_location, obj);
     try testing.expectEqual(obj, init_result);
 
-    const loaded = raw.compiler_runtime.objc_loadWeak(&weak_location);
+    const loaded = objc_loadWeak(&weak_location);
     try testing.expectEqual(obj, loaded);
 
-    _ = raw.compiler_runtime.objc_storeWeak(&weak_location, null);
+    _ = objc_storeWeak(&weak_location, null);
     try testing.expect(weak_location == null);
 
-    raw.compiler_runtime.objc_destroyWeak(&weak_location);
+    objc_destroyWeak(&weak_location);
 }

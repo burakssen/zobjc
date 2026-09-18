@@ -6,7 +6,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const testing = std.testing;
-const raw = @import("root.zig");
 
 // --- Opaque runtime structures ---
 
@@ -80,7 +79,7 @@ pub const IMP = ?*const fn () callconv(.c) void;
 /// architecture-first switch below encodes. Note the header's `TARGET_OS_OSX`
 /// fallback text alone is misleading: with any current Clang the predefined
 /// macro wins, so macOS arm64 `BOOL` is C99 `bool` (`@encode` → `"B"`).
-/// The Clang differential test `checkDifferential(raw.BOOL,
+/// The Clang differential test `checkDifferential(BOOL,
 /// fixture_encode_bool)` pins this per toolchain; it fails if the model and
 /// the C compiler disagree.
 pub const objc_bool_is_bool = switch (builtin.cpu.arch) {
@@ -124,71 +123,66 @@ pub const objc_property_attribute_t = extern struct {
 };
 
 test "opaque handle sizes and alignments" {
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.id));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.id));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(id));
+    try testing.expectEqual(@alignOf(usize), @alignOf(id));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.Class));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.Class));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Class));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Class));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.SEL));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.SEL));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(SEL));
+    try testing.expectEqual(@alignOf(usize), @alignOf(SEL));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.IMP));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.IMP));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(IMP));
+    try testing.expectEqual(@alignOf(usize), @alignOf(IMP));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.Method));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.Method));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Method));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Method));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.Ivar));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.Ivar));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Ivar));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Ivar));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.objc_property_t));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.objc_property_t));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(objc_property_t));
+    try testing.expectEqual(@alignOf(usize), @alignOf(objc_property_t));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.Protocol));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.Protocol));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Protocol));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Protocol));
 
-    try testing.expectEqual(@sizeOf(usize), @sizeOf(raw.Category));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.Category));
+    try testing.expectEqual(@sizeOf(usize), @sizeOf(Category));
+    try testing.expectEqual(@alignOf(usize), @alignOf(Category));
 }
 
 test "BOOL representation and boolean conversion helpers" {
-    try testing.expectEqual(1, @sizeOf(raw.BOOL));
-    try testing.expectEqual(1, @alignOf(raw.BOOL));
+    try testing.expectEqual(1, @sizeOf(BOOL));
+    try testing.expectEqual(1, @alignOf(BOOL));
 
     // Toolchain-verified model: with current Clang, macOS arm64 BOOL is
     // C99 bool (compiler predefines __OBJC_BOOL_IS_BOOL=1); macOS x86_64
     // stays signed char. The Clang differential fixture is authoritative.
     if (builtin.os.tag == .macos and builtin.cpu.arch == .aarch64) {
-        try testing.expect(raw.objc_bool_is_bool);
-        try testing.expect(raw.BOOL == bool);
+        try testing.expect(objc_bool_is_bool);
+        try testing.expect(BOOL == bool);
     }
     if (builtin.os.tag == .macos and builtin.cpu.arch == .x86_64) {
-        try testing.expect(!raw.objc_bool_is_bool);
-        try testing.expect(raw.BOOL == i8);
+        try testing.expect(!objc_bool_is_bool);
+        try testing.expect(BOOL == i8);
     }
 
-    try testing.expect(raw.boolResult(raw.YES));
-    try testing.expect(!raw.boolResult(raw.NO));
-
-    try testing.expectEqual(raw.YES, raw.boolParam(true));
-    try testing.expectEqual(raw.NO, raw.boolParam(false));
 }
 
 test "ABI struct memory layouts" {
-    try testing.expectEqual(2 * @sizeOf(usize), @sizeOf(raw.objc_super));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.objc_super));
+    try testing.expectEqual(2 * @sizeOf(usize), @sizeOf(objc_super));
+    try testing.expectEqual(@alignOf(usize), @alignOf(objc_super));
 
-    const s: raw.objc_super = .{
+    const s: objc_super = .{
         .receiver = null,
         .super_class = null,
     };
-    try testing.expectEqual(@as(raw.id, null), s.receiver);
-    try testing.expectEqual(@as(raw.Class, null), s.super_class);
+    try testing.expectEqual(@as(id, null), s.receiver);
+    try testing.expectEqual(@as(Class, null), s.super_class);
 
-    try testing.expectEqual(2 * @sizeOf(usize), @sizeOf(raw.objc_method_description));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.objc_method_description));
+    try testing.expectEqual(2 * @sizeOf(usize), @sizeOf(objc_method_description));
+    try testing.expectEqual(@alignOf(usize), @alignOf(objc_method_description));
 
-    try testing.expectEqual(2 * @sizeOf(usize), @sizeOf(raw.objc_property_attribute_t));
-    try testing.expectEqual(@alignOf(usize), @alignOf(raw.objc_property_attribute_t));
+    try testing.expectEqual(2 * @sizeOf(usize), @sizeOf(objc_property_attribute_t));
+    try testing.expectEqual(@alignOf(usize), @alignOf(objc_property_attribute_t));
 }

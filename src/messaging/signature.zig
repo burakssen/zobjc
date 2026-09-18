@@ -2,8 +2,6 @@
 
 const std = @import("std");
 const raw = @import("raw");
-const runtime = @import("runtime");
-const wrapper = @import("internal").wrapper;
 const encoding = @import("encoding");
 const receiver_mod = @import("receiver.zig");
 const selector_mod = @import("selector.zig");
@@ -45,35 +43,17 @@ pub inline fn sendChecked(
     if (std.debug.runtime_safety) {
         // Built at comptime (this function is inline); the runtime check below
         // only parses and compares strings.
-        const expected = comptime expectedMethodEncoding(Return, @TypeOf(receiver), @TypeOf(args));
+        const expected = comptime expectedMethodEncoding(Return, @TypeOf(args));
         checkSignature(receiver, selector, &expected);
     }
     return send_mod.send(Return, receiver, selector, args);
 }
 
-fn receiverIsClass(comptime R: type) bool {
-    if (R == runtime.Class or R == ?runtime.Class) return true;
-    if (R == raw.Class or R == *raw.objc_class) return true;
-    if (@typeInfo(R) == .optional) return receiverIsClass(@typeInfo(R).optional.child);
-    if (wrapper.isObjCWrapper(R)) return wrapper.wrapperKind(R) == .class;
-    return false;
-}
-
-fn receiverEncodingChar(comptime R: type) u8 {
-    if (receiverIsClass(R)) return '#';
-    if (@typeInfo(R) == .optional) return receiverEncodingChar(@typeInfo(R).optional.child);
-    if (wrapper.isObjCWrapper(R)) {
-        return if (wrapper.wrapperKind(R) == .class) '#' else '@';
-    }
-    return '@';
-}
-
-fn expectedMethodEncodingLength(comptime Return: type, comptime Receiver: type, comptime Args: type) usize {
+fn expectedMethodEncodingLength(comptime Return: type, comptime Args: type) usize {
     comptime {
-        _ = Receiver; // self is always exactly one encoding char ('@' or '#').
         const AbiReturn = returns_mod.AbiReturnType(Return);
         var total: usize = encoding.encoder.encodedLength(AbiReturn);
-        total += 1; // self ('@' or '#')
+        total += 1; // self ('@')
         total += 1; // _cmd (':')
         const fields = @typeInfo(Args).@"struct".fields;
         for (fields) |f| {
@@ -85,11 +65,10 @@ fn expectedMethodEncodingLength(comptime Return: type, comptime Receiver: type, 
 
 fn expectedMethodEncoding(
     comptime Return: type,
-    comptime Receiver: type,
     comptime Args: type,
-) [expectedMethodEncodingLength(Return, Receiver, Args):0]u8 {
+) [expectedMethodEncodingLength(Return, Args):0]u8 {
     comptime {
-        const len = expectedMethodEncodingLength(Return, Receiver, Args);
+        const len = expectedMethodEncodingLength(Return, Args);
         var buf: [len:0]u8 = undefined;
         var idx: usize = 0;
 
@@ -98,7 +77,9 @@ fn expectedMethodEncoding(
         @memcpy(buf[idx .. idx + ret_enc.len], &ret_enc);
         idx += ret_enc.len;
 
-        buf[idx] = receiverEncodingChar(Receiver);
+        // Canonical method encoding: implicit self is always '@', even for
+        // class methods (the receiver's class-ness is not re-encoded here).
+        buf[idx] = '@';
         idx += 1;
         buf[idx] = ':';
         idx += 1;
@@ -151,6 +132,35 @@ fn aggregatesCompatible(runtime_agg: encoding.AggregateType, expected_agg: encod
     return true;
 }
 
+/// Outcome of comparing parsed runtime vs expected method signatures.
+/// `skip` is the documented fail-open path: malformed or non-standard runtime
+/// encodings never panic.
+const SignatureVerdict = union(enum) {
+    match,
+    skip,
+    return_mismatch,
+    count_mismatch,
+    argument_mismatch: usize,
+};
+
+/// Pure comparison behind `checkSignature`: return type, exact arity, then the
+/// explicit arguments at [2..]. Unknown runtime types stay compatible.
+fn checkSignatures(
+    runtime_sig: encoding.method.MethodSignature,
+    expected_sig: encoding.method.MethodSignature,
+) SignatureVerdict {
+    runtime_sig.validateObjectiveCMethod() catch return .skip;
+    if (!typesCompatible(runtime_sig.return_type.type, expected_sig.return_type.type))
+        return .return_mismatch;
+    if (runtime_sig.arguments.len != expected_sig.arguments.len)
+        return .count_mismatch;
+    for (runtime_sig.arguments[2..], expected_sig.arguments[2..], 0..) |ra, ea, i| {
+        if (!typesCompatible(ra.type.type, ea.type.type))
+            return .{ .argument_mismatch = i };
+    }
+    return .match;
+}
+
 fn checkSignature(
     receiver: anytype,
     selector: anytype,
@@ -164,17 +174,11 @@ fn checkSignature(
         std.debug.panic("Objective-C message target does not respond to selector", .{});
     }
 
+    // `object_getClass` yields the dispatch class directly: the class for an
+    // instance, the metaclass for a class object (whose instance methods are
+    // the class methods). One lookup covers both receivers.
     const cls = raw.runtime.object_getClass(raw_rec.?) orelse return;
-    const method = if (receiverIsClass(@TypeOf(receiver)))
-        raw.runtime.class_getClassMethod(cls, raw_sel)
-    else
-        raw.runtime.class_getInstanceMethod(cls, raw_sel);
-    // Fall back to the other lookup before giving up (e.g. root-class edge cases).
-    const resolved = method orelse if (receiverIsClass(@TypeOf(receiver)))
-        raw.runtime.class_getInstanceMethod(cls, raw_sel)
-    else
-        raw.runtime.class_getClassMethod(cls, raw_sel);
-    const m = resolved orelse std.debug.panic(
+    const m = raw.runtime.class_getInstanceMethod(cls, raw_sel) orelse std.debug.panic(
         "Objective-C message target responds to selector but no Method was found",
         .{},
     );
@@ -192,35 +196,20 @@ fn checkSignature(
     var expected_sig = encoding.parseMethod(allocator, expected_enc) catch return;
     defer expected_sig.deinit(allocator);
 
-    if (!typesCompatible(runtime_sig.return_type.type, expected_sig.return_type.type)) {
-        std.debug.panic(
+    switch (checkSignatures(runtime_sig, expected_sig)) {
+        .match, .skip => {},
+        .return_mismatch => std.debug.panic(
             "Objective-C return signature mismatch: runtime '{s}' vs requested '{s}'",
             .{ runtime_enc, expected_enc },
-        );
-    }
-    // Standard method encodings always lead with `self` (`@` for instances,
-    // `#` for classes) and `_cmd` (`:`): e.g. `+alloc` is `@16@0:8`, where
-    // `@0` is self and `:8` is _cmd. Gate on that structure first and fail
-    // open for anything non-standard. Selector colon validation in `send()`
-    // already guarantees the caller-side explicit argument count, so a
-    // standard runtime encoding must then match exactly: same arity, with the
-    // explicit arguments compared at [2..] instead of tail-aligned.
-    runtime_sig.validateObjectiveCMethod() catch return;
-    if (runtime_sig.arguments.len != expected_sig.arguments.len) {
-        std.debug.panic(
+        ),
+        .count_mismatch => std.debug.panic(
             "Objective-C argument count mismatch: runtime '{s}' vs requested '{s}'",
             .{ runtime_enc, expected_enc },
-        );
-    }
-    const runtime_explicit = runtime_sig.arguments[2..];
-    const requested_explicit = expected_sig.arguments[2..];
-    for (runtime_explicit, requested_explicit, 0..) |ra, ea, i| {
-        if (!typesCompatible(ra.type.type, ea.type.type)) {
-            std.debug.panic(
-                "Objective-C argument #{d} signature mismatch: runtime '{s}' vs requested '{s}'",
-                .{ i, runtime_enc, expected_enc },
-            );
-        }
+        ),
+        .argument_mismatch => |i| std.debug.panic(
+            "Objective-C argument #{d} signature mismatch: runtime '{s}' vs requested '{s}'",
+            .{ i, runtime_enc, expected_enc },
+        ),
     }
 }
 
@@ -239,6 +228,40 @@ test "sendChecked: valid NSObject messages pass signature validation" {
     _ = hash;
     const eq = sendChecked(raw.BOOL, init, "isEqual:", .{init});
     try std.testing.expect(raw.boolResult(eq));
+}
+
+test "checkSignatures: table of encoding pairs" {
+    const allocator = std.testing.allocator;
+    const Case = struct {
+        runtime: []const u8,
+        expected: []const u8,
+        verdict: SignatureVerdict,
+    };
+    const cases = [_]Case{
+        // Exact matches, with and without offsets/frame size.
+        .{ .runtime = "@@:", .expected = "@@:", .verdict = .match },
+        .{ .runtime = "v@:i", .expected = "v@:i", .verdict = .match },
+        .{ .runtime = "@16@0:8", .expected = "@@:", .verdict = .match },
+        .{ .runtime = "v24@0:8i16", .expected = "v@:i", .verdict = .match },
+        // Wrong explicit argument type / count.
+        .{ .runtime = "v@:i", .expected = "v@:f", .verdict = .{ .argument_mismatch = 0 } },
+        .{ .runtime = "v@:if", .expected = "v@:fi", .verdict = .{ .argument_mismatch = 0 } },
+        .{ .runtime = "v@:i", .expected = "v@:", .verdict = .count_mismatch },
+        .{ .runtime = "v@:", .expected = "v@:i", .verdict = .count_mismatch },
+        // Wrong return type.
+        .{ .runtime = "i@:", .expected = "v@:", .verdict = .return_mismatch },
+        // Missing _cmd: non-standard structure fails open.
+        .{ .runtime = "v@", .expected = "v@:", .verdict = .skip },
+        // Unknown (Clang edge-case) return type fails open.
+        .{ .runtime = "16@0:8", .expected = "@@:", .verdict = .match },
+    };
+    for (cases) |c| {
+        var runtime_sig = try encoding.parseMethod(allocator, c.runtime);
+        defer runtime_sig.deinit(allocator);
+        var expected_sig = try encoding.parseMethod(allocator, c.expected);
+        defer expected_sig.deinit(allocator);
+        try std.testing.expectEqualDeep(c.verdict, checkSignatures(runtime_sig, expected_sig));
+    }
 }
 
 test "sendChecked: nil receiver short-circuits without lookup" {
