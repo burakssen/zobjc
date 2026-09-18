@@ -44,8 +44,29 @@ fn impToRaw(imp: anytype) RawImp {
     const T = @TypeOf(imp);
     if (T == raw.IMP) return imp orelse @panic("callImp() received null IMP");
     // NOTE: explicit `comptime` below is load-bearing (see NOTE in abi/type.zig).
-    if (comptime wrapper.isObjCWrapper(T) and wrapper.wrapperKind(T) == .imp and @typeInfo(T) != .optional) return imp.ptr;
+    if (comptime wrapper.isObjCWrapper(T) and wrapper.wrapperKind(T) == .imp and @typeInfo(T) != .optional) {
+        // Honor both valid `.imp` field shapes; null fails closed.
+        if (@TypeOf(imp.ptr) == RawImp) return imp.ptr;
+        if (@TypeOf(imp.ptr) == raw.IMP) return imp.ptr orelse @panic("callImp() wrapper contained null IMP");
+    }
     @compileError("callImp() requires a raw.IMP or an .imp-kind wrapper, found: " ++ @typeName(T));
+}
+
+const NonNullImpWrapper = struct {
+    ptr: RawImp,
+    pub const objc_wrapper = true;
+};
+
+const NullableImpWrapper = struct {
+    ptr: raw.IMP,
+    pub const objc_wrapper = true;
+};
+
+test "impToRaw: both valid .imp field shapes normalize" {
+    const fn_ptr: RawImp = @ptrFromInt(0x1000);
+    try @import("std").testing.expectEqual(fn_ptr, impToRaw(NonNullImpWrapper{ .ptr = fn_ptr }));
+    try @import("std").testing.expectEqual(fn_ptr, impToRaw(NullableImpWrapper{ .ptr = fn_ptr }));
+    try @import("std").testing.expectEqual(fn_ptr, impToRaw(@as(raw.IMP, fn_ptr)));
 }
 
 /// Directly invokes `method` on `receiver` with tuple `args`.

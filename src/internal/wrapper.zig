@@ -2,7 +2,8 @@
 //!
 //! A custom Zig type opts into Objective-C handle semantics by declaring BOTH:
 //! 1. a `ptr` field whose type is one of `*raw.objc_object`, `*raw.objc_class`,
-//!    `*raw.objc_selector`, `raw.IMP`, or `?raw.IMP`, and
+//!    `*raw.objc_selector`, `raw.IMP` (nullable), or the unwrapped non-null
+//!    IMP function pointer, and
 //! 2. an explicit opt-in marker: either
 //!    - `pub const objc_wrapper = true;`, or
 //!    - `asObject()/fromObject()` (memory convention), or
@@ -30,7 +31,7 @@ fn ptrFieldKind(comptime T: type) WrapperKind {
     if (FieldType == *raw.objc_object) return .object;
     if (FieldType == *raw.objc_class) return .class;
     if (FieldType == *raw.objc_selector) return .selector;
-    if (FieldType == raw.IMP or FieldType == ?raw.IMP) return .imp;
+    if (FieldType == raw.IMP) return .imp;
     // `Imp.ptr` stores the unwrapped function pointer (same ABI, non-optional).
     if (FieldType == @typeInfo(raw.IMP).optional.child) return .imp;
     return .none;

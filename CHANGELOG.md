@@ -19,6 +19,9 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Simplified the wrapper trait to the two meaningful `.imp` field shapes
+  (`raw.IMP` and the unwrapped pointer), dropping the nested `?raw.IMP`
+  form; `callImp` normalizes both shapes and fails closed on null.
 - Made messaging `invoke`/`callImp` normalizers reject null raw
   `Method`/`IMP` handles with a panic, preserving the previous non-null
   `runtime.Method`/`Imp` invariant; converted remaining messaging
