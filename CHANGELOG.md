@@ -60,7 +60,7 @@ All notable changes to zobjc are documented here. Format follows
   method validation derive handle behavior from wrapper kinds (with a
   canonical `@:` and a new pure-trait `Imp → ^?` path), live differential
   tests moved to the facade, and `wireModules()` now lists remaining upward
-  edges explicitly (`block`, `memory`, `messaging`, `runtime`).
+  facade edges explicitly.
 - Made `raw.boolResult()` follow C truthiness (`!= 0`) instead of `== 1`,
   so non-canonical signed-char `BOOL` values convert correctly; pinned with
   char-`BOOL`-target regression assertions.
