@@ -95,6 +95,19 @@ const ExplicitFalse = struct {
     pub const objc_wrapper = false;
 };
 
+const ExplicitFalseWithConvention = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = false;
+
+    pub fn asObject(self: @This()) @This() {
+        return self;
+    }
+
+    pub fn fromObject(o: @This()) @This() {
+        return o;
+    }
+};
+
 const OtherPtr = struct {
     ptr: *u8,
     pub const objc_wrapper = true;
@@ -112,6 +125,11 @@ test "wrapper: explicit false opts out" {
     try testing.expect(!isObjCWrapper(ExplicitFalse));
     try testing.expect(!isObjCWrapper(?ExplicitFalse));
     try testing.expectEqual(WrapperKind.none, wrapperKind(ExplicitFalse));
+}
+
+test "wrapper: explicit false overrides conventions" {
+    try testing.expect(!isObjCWrapper(ExplicitFalseWithConvention));
+    try testing.expectEqual(WrapperKind.none, wrapperKind(ExplicitFalseWithConvention));
 }
 
 test "wrapper: bare ptr structs are rejected" {

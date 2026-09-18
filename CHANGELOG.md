@@ -19,6 +19,9 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Made `objc_wrapper = false` an explicit wrapper-trait opt-out (taking
+  precedence over inferred conventions) and reject non-boolean marker
+  declarations at compile time.
 - Decoupled `encoding` from `runtime` and the facade via the wrapper trait:
   the five core handles now carry `objc_wrapper`, `encoder`/`StorageType`/
   method validation derive handle behavior from wrapper kinds (with a

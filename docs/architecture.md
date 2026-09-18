@@ -3,25 +3,24 @@
 Intended module dependency DAG (no arrows point upward):
 
 ```text
-                         zobjc (facade)
-                           │
-            ┌──────────────┼──────────────┐
-            ▼              ▼              ▼
-          block          runtime        memory
-            │              │              │
-            └──────┬───────┴──────┬───────┘
-                   ▼              ▼
-               messaging       traits (internal/wrapper)
-                   │
-            ┌──────┴──────┐
-            ▼             ▼
-           abi         encoding
-            │             │
-            └──────┬──────┘
-                   ▼
-                  raw
-                   ▼
-                 libobjc
+                      zobjc (facade)
+                        │
+          ┌─────────────┼─────────────┐
+          ▼             ▼             ▼
+        block         runtime        memory
+          │             │             │
+          └───────┬─────┴─────┬───────┘
+                  ▼           ▼
+              messaging    internal
+               /     \         ▲
+              ▼       ▼        │
+             abi   encoding ───┘
+              │       │
+              └───┬───┘
+                  ▼
+                 raw
+                  │
+                libobjc
 ```
 
 Rules:
