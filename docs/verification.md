@@ -11,6 +11,10 @@
      expected `return + self + _cmd + args` encoding from the Zig signature,
      and panics on mismatch (offsets/frame size ignored).
   4. forwards to `send` (zero extra cost in release-fast; no check at all).
+- `sendChecked` is best-effort, not guaranteed: it fails open (skips the
+  check, no panic) when the runtime encoding uses a type the parser does not
+  model (`unknown` compares compatible) or when either signature fails to
+  parse (e.g. 2048-byte fixed-buffer OOM). Unknown/missing data never panics.
 - Differential gates that must stay green:
   - `encoding`: `checkDifferential(raw.BOOL, fixture_encode_bool)` pins the
     platform `BOOL` encoding per toolchain (`B` on macOS arm64 and 64-bit

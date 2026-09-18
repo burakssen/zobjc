@@ -22,8 +22,8 @@ All notable changes to zobjc are documented here. Format follows
 - Fixed CI bootstrap: `mlugg/setup-zig@v1` 404s on Zig 0.16.0; moved to
   `mlugg/setup-zig@v2`.
 - Added native x86-64 CI coverage (`macos-15-intel`) alongside arm64
-  (`macos-14`) so `stret`/`fpret`/`fp2ret` messenger selection is exercised
-  natively.
+  (`macos-14`) so `stret`/`fpret` messenger selection and `fp2ret`
+  non-selection invariants are exercised natively.
 - Made `sendChecked` genuinely signature-aware in safety builds: beyond
   `respondsToSelector`, it now compares `method_getTypeEncoding()` against
   the Zig-requested signature and panics on mismatch.

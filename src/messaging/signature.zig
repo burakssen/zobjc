@@ -29,6 +29,10 @@ pub fn respondsToSelector(receiver: anytype, selector: anytype) bool {
 /// frame size ignored) and panics on mismatch. Ordinary `send()` remains the
 /// zero-overhead expert API with no runtime lookup.
 ///
+/// Best-effort only: unknown runtime types compare compatible and parse/OOM
+/// failures skip the check instead of panicking.
+/// // ponytail: docs only, no stricter mode — YAGNI, std lib has no equivalent
+///
 /// Panics in Debug/ReleaseSafe if `receiver` is non-nil and does not respond
 /// to `selector`, if no method implementation can be found, or if the runtime
 /// signature is incompatible with the requested Zig signature.

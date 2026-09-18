@@ -68,8 +68,8 @@ Differential tests compare Zig behavior against Clang Objective-C fixtures in
 - `block`: Clang ↔ Zig interop rather than self-tests only.
 
 CI runs the full matrix natively on macOS arm64 and macOS x86_64 because the
-x86-64 messenger selection (`stret`/`fpret`/`fp2ret`) cannot be validated by
-cross-compiled classifier logic alone.
+x86-64 messenger selection (`stret`/`fpret`, plus `fp2ret` non-selection)
+cannot be validated by cross-compiled classifier logic alone.
 
 ## Type-safety boundary
 

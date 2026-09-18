@@ -43,6 +43,7 @@ pub const sel = runtime.sel;
 
 // Messaging engine
 pub const send = messaging.send;
+pub const sendChecked = messaging.sendChecked; // ponytail: re-export only, no wrapper — keeps checked path discoverable at top level
 pub const sendSuper = messaging.sendSuper;
 pub const invoke = messaging.invoke;
 pub const callImp = messaging.callImp;
