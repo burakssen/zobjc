@@ -16,31 +16,35 @@ const call_mod = @import("internal/call.zig");
 
 // Reuses unified argument and return normalization for method and IMP calls.
 
-/// Normalizes a method value to `raw.Method`: a raw handle directly, or an
-/// explicit wrapper exposing `toRaw() -> raw.Method` (e.g. runtime.Method).
+/// Normalizes a method value to a non-null `*raw.objc_method`: a raw handle
+/// directly (null panics), or an explicit wrapper exposing
+/// `toRaw() -> raw.Method` (e.g. runtime.Method, null panics).
 /// Method metadata descriptors are intentionally not a `WrapperKind`.
-fn methodToRaw(method: anytype) raw.Method {
+fn methodToRaw(method: anytype) *raw.objc_method {
     const T = @TypeOf(method);
-    if (T == raw.Method or T == *raw.objc_method) return method;
+    if (T == raw.Method) return method orelse @panic("invoke() received null Method");
+    if (T == *raw.objc_method) return method;
     // NOTE: explicit `comptime` below is load-bearing (see NOTE in abi/type.zig).
     // The toRaw shape check ignores calling convention (`inline` included):
     // single (self) parameter returning exactly raw.Method.
     if (comptime @typeInfo(T) == .@"struct" and @hasDecl(T, "toRaw")) {
         const FT = @typeInfo(@TypeOf(@field(T, "toRaw")));
         if (FT == .@"fn" and FT.@"fn".params.len == 1 and FT.@"fn".return_type == raw.Method) {
-            return method.toRaw();
+            return method.toRaw() orelse @panic("invoke() wrapper returned null Method");
         }
     }
     @compileError("invoke() requires a raw.Method or a wrapper exposing toRaw() -> raw.Method, found: " ++ @typeName(T));
 }
 
-/// Normalizes an IMP value to `raw.IMP`: a raw handle directly, or an
-/// `.imp`-kind wrapper.
-fn impToRaw(imp: anytype) raw.IMP {
+/// Normalizes an IMP value to a non-null raw function pointer: a raw
+/// handle directly (null panics), or a non-optional `.imp`-kind wrapper.
+const RawImp = @typeInfo(raw.IMP).optional.child;
+
+fn impToRaw(imp: anytype) RawImp {
     const T = @TypeOf(imp);
-    if (T == raw.IMP) return imp;
+    if (T == raw.IMP) return imp orelse @panic("callImp() received null IMP");
     // NOTE: explicit `comptime` below is load-bearing (see NOTE in abi/type.zig).
-    if (comptime wrapper.isObjCWrapper(T) and wrapper.wrapperKind(T) == .imp) return imp.ptr;
+    if (comptime wrapper.isObjCWrapper(T) and wrapper.wrapperKind(T) == .imp and @typeInfo(T) != .optional) return imp.ptr;
     @compileError("callImp() requires a raw.IMP or an .imp-kind wrapper, found: " ++ @typeName(T));
 }
 

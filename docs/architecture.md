@@ -36,7 +36,6 @@ Rules:
 - `messaging` sits above `abi` + `encoding` + `raw` + `internal` only: all
   handle normalization goes through wrapper kinds, never `runtime` types by
   name; live dispatch tests live at the facade.
-- `messaging` sits above `abi` + `encoding` + `raw` and shared traits.
 - `runtime`, `memory`, and `block` sit above `messaging` and traits.
 - The `zobjc` facade (`src/root.zig`) knows every subsystem; no subsystem
   may import the facade. `build.zig:wireModules()` must not add upward edges

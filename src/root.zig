@@ -549,7 +549,7 @@ test "super: 3-level class hierarchy with Super2 lookup" {
 test "differential: super dispatch matches native Objective-C super behavior" {
     const ABISubclass = objc.getClass("ABISubclass").?;
     const sub = objc.send(objc.Object, ABISubclass, "alloc", .{}).send(objc.Object, "init", .{});
-    defer sub.send(void, "dealloc", .{});
+    defer sub.send(void, "release", .{});
 
     const overridden = sub.send(c_int, "echoInt:", .{@as(c_int, 5)});
     try integration_std.testing.expectEqual(@as(c_int, 50), overridden);
@@ -588,7 +588,7 @@ test "invoke: callImp directly invokes IMP function pointer" {
 test "differential: Method.invoke agrees with ordinary message dispatch" {
     const ABIFixture = objc.getClass("ABIFixture").?;
     const fixture = objc.send(objc.Object, ABIFixture, "alloc", .{}).send(objc.Object, "init", .{});
-    defer fixture.send(void, "dealloc", .{});
+    defer fixture.send(void, "release", .{});
 
     const method = ABIFixture.instanceMethod(objc.sel("echoInt:")).?;
     const res1 = fixture.send(c_int, "echoInt:", .{@as(c_int, 123)});
@@ -698,7 +698,7 @@ fn newABIFixture() objc.Object {
 
 test "differential: scalar methods on ABIFixture" {
     const fixture = newABIFixture();
-    defer fixture.send(void, "dealloc", .{});
+    defer fixture.send(void, "release", .{});
 
     const int_val = objc.send(c_int, fixture, "returnInt", .{});
     try integration_std.testing.expectEqual(@as(c_int, 42), int_val);
@@ -716,7 +716,7 @@ test "differential: scalar methods on ABIFixture" {
 
 test "differential: small structures (<= 16 bytes) on ABIFixture" {
     const fixture = newABIFixture();
-    defer fixture.send(void, "dealloc", .{});
+    defer fixture.send(void, "release", .{});
 
     const s1 = objc.send(ABISize1, fixture, "returnSize1", .{});
     try integration_std.testing.expectEqual(@as(u8, 'A'), @as(u8, @intCast(s1.a)));
@@ -775,7 +775,7 @@ test "differential: small structures (<= 16 bytes) on ABIFixture" {
 
 test "differential: large structures and aggregate arguments on ABIFixture" {
     const fixture = newABIFixture();
-    defer fixture.send(void, "dealloc", .{});
+    defer fixture.send(void, "release", .{});
 
     const s24 = objc.send(ABISize24, fixture, "returnSize24", .{});
     try integration_std.testing.expectEqual(1.0, s24.a);
@@ -818,7 +818,7 @@ test "differential: large structures and aggregate arguments on ABIFixture" {
 
 test "differential: register pressure with 10 integers" {
     const fixture = newABIFixture();
-    defer fixture.send(void, "dealloc", .{});
+    defer fixture.send(void, "release", .{});
 
     const sum = fixture.send(c_int, "sum10Ints:b:c:d:e:f:g:h:i:j:", .{
         @as(c_int, 1),
@@ -837,7 +837,7 @@ test "differential: register pressure with 10 integers" {
 
 test "differential: register pressure with 10 doubles" {
     const fixture = newABIFixture();
-    defer fixture.send(void, "dealloc", .{});
+    defer fixture.send(void, "release", .{});
 
     const sum = fixture.send(f64, "sum10Doubles:b:c:d:e:f:g:h:i:j:", .{
         @as(f64, 1.0),
@@ -859,7 +859,7 @@ test "sendChecked: valid NSObject messages pass signature validation" {
 
     const obj = sendChecked(objc.Object, NSObject, "alloc", .{});
     const init = sendChecked(objc.Object, obj, "init", .{});
-    defer init.send(void, "dealloc", .{});
+    defer init.send(void, "release", .{});
 
     // description -> @ ; hash -> NSUInteger ; isEqual: takes @, returns BOOL.
     const desc = sendChecked(?objc.Object, init, "description", .{});

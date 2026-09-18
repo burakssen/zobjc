@@ -19,6 +19,10 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Made messaging `invoke`/`callImp` normalizers reject null raw
+  `Method`/`IMP` handles with a panic, preserving the previous non-null
+  `runtime.Method`/`Imp` invariant; converted remaining messaging
+  integration-test cleanups from `dealloc` to `release`.
 - Decoupled `messaging` from `runtime` and the facade: handle normalization
   (`receiver`/`arguments`/`returns`/`selector`/`validation`) is
   wrapper-trait-authoritative, selectors register via `raw`, super dispatch
