@@ -83,10 +83,13 @@ fn coerceObjectParam(comptime PT: type, p: *raw.objc_object) PT {
             return made orelse unreachable;
         }
     }
-    if (@typeInfo(PT) == .@"struct" and @hasField(PT, "ptr")) {
+    // NOTE: explicit wrapper required here, not merely a `ptr` field: the
+    // project no longer duck-types on field names for reconstruction.
+    if (comptime wrapper.isObjCWrapper(PT) and wrapper.wrapperKind(PT) == .object) {
         return PT{ .ptr = p };
     }
-    @compileError("cannot reconstruct " ++ @typeName(PT) ++ " from a raw object pointer");
+    @compileError("cannot reconstruct " ++ @typeName(PT) ++ " from a raw object pointer: " ++
+        "provide fromRawNonNull(*raw.objc_object) or make it an explicit .object wrapper");
 }
 
 /// Converts a non-null raw `*raw.objc_object` pointer into a retainable value T.

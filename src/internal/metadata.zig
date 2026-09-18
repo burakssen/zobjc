@@ -5,6 +5,7 @@
 //! `runtime.PropertyAttribute` are aliases of these structs.
 
 const std = @import("std");
+const testing = std.testing;
 const raw = @import("raw");
 const Selector = @import("selector.zig").Selector;
 
@@ -56,3 +57,8 @@ pub const PropertyAttribute = extern struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.objc_property_attribute_t));
     }
 };
+
+test "handle: PropertyAttribute matches raw C layout exactly" {
+    try testing.expectEqual(@sizeOf(raw.objc_property_attribute_t), @sizeOf(PropertyAttribute));
+    try testing.expectEqual(@alignOf(raw.objc_property_attribute_t), @alignOf(PropertyAttribute));
+}

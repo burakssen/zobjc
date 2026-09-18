@@ -27,7 +27,9 @@ Intended module dependency DAG (no arrows point upward):
 Rules:
 
 - `raw` mirrors libobjc and must not import `zobjc` or any higher layer.
-- `internal` holds shared traits (`wrapper`) above `raw` only.
+- `internal` holds shared traits and low-level value types used by multiple
+  higher layers (`wrapper`, `Selector`, `MethodDescription`,
+  `PropertyAttribute`); it depends only on `raw`.
 - `encoding` sits above `raw` + `internal` only: it knows wrapper
   abstractions (object/class/selector/imp kinds), never `runtime` types by
   name.
