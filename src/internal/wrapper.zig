@@ -37,7 +37,13 @@ fn ptrFieldKind(comptime T: type) WrapperKind {
 }
 
 fn hasExplicitMarker(comptime T: type) bool {
-    if (@hasDecl(T, "objc_wrapper")) return true;
+    if (@hasDecl(T, "objc_wrapper")) {
+        const marker = @field(T, "objc_wrapper");
+        if (@TypeOf(marker) != bool) {
+            @compileError("objc_wrapper must be a bool in '" ++ @typeName(T) ++ "'");
+        }
+        return marker;
+    }
     if (@hasDecl(T, "asObject") and @hasDecl(T, "fromObject")) return true;
     if (@hasDecl(T, "toObjC") and @hasDecl(T, "fromObjC")) return true;
     return false;
@@ -84,6 +90,11 @@ const BarePtr = struct {
     ptr: *raw.objc_object,
 };
 
+const ExplicitFalse = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = false;
+};
+
 const OtherPtr = struct {
     ptr: *u8,
     pub const objc_wrapper = true;
@@ -95,6 +106,12 @@ test "wrapper: explicit markers are recognized" {
     try testing.expect(isObjCWrapper(AsObjectPair));
     try testing.expectEqual(WrapperKind.object, wrapperKind(ExplicitObject));
     try testing.expectEqual(WrapperKind.object, wrapperKind(?ExplicitObject));
+}
+
+test "wrapper: explicit false opts out" {
+    try testing.expect(!isObjCWrapper(ExplicitFalse));
+    try testing.expect(!isObjCWrapper(?ExplicitFalse));
+    try testing.expectEqual(WrapperKind.none, wrapperKind(ExplicitFalse));
 }
 
 test "wrapper: bare ptr structs are rejected" {

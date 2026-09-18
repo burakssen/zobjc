@@ -38,11 +38,12 @@ Rules:
   (no `subsystem.addImport("zobjc", ...)`).
 
 Status: the codebase is migrating toward this graph. New code must follow it;
-`raw` is already a leaf (relative imports only, no `zobjc` edge in
-`wireModules()`), and `encoding`/`internal` no longer import `runtime` or
-the facade (`wireModules()` lists only an explicit `legacy_facade_dependents`
-set: abi, block, memory, messaging, runtime). Remaining back-edges are
-removed incrementally, next `abi`.
+Target-vs-current status: `raw`, `internal`, and `encoding` already match
+the target DAG (no `runtime`/facade imports). `abi` is next: it still
+temporarily depends on the facade, `encoding`, `runtime`, and `internal` in
+addition to `raw`, and remains in `legacy_facade_dependents` alongside
+`block`, `memory`, `messaging`, and `runtime`. Further back-edges are removed
+incrementally.
 
 ## API layers
 
