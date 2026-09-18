@@ -25,8 +25,8 @@ All notable changes to zobjc are documented here. Format follows
   `object_getClass` + `class_getInstanceMethod` for both receivers, dropping
   the fallback chain and `receiverIsClass`.
 - Extracted the pure `checkSignatures` comparison with table regression
-  tests covering exact matches, wrong type/arity/return, and fail-open
-  (`skip`) paths.
+  tests covering exact matches, mismatches, structural `skip`, and
+  unknown-type fail-open behavior.
 - Removed the file-internal `raw` <-> `root.zig` import edges: raw sources
   now reference local declarations and sibling files directly, with the
   `BOOL` helper assertions moved to the facade test block.

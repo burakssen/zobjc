@@ -11,7 +11,10 @@ const send_mod = @import("send.zig");
 
 // Optional diagnostic layer that compiles away in fast release modes.
 
-/// Checks whether `receiver` has an implementation for `selector`.
+/// Checks whether `receiver` has an implementation for `selector` via the
+/// runtime method table (`class_respondsToSelector`). This is not a
+/// `-respondsToSelector:` message send, so a custom per-object override of
+/// that method is not honored.
 pub fn respondsToSelector(receiver: anytype, selector: anytype) bool {
     const raw_rec = receiver_mod.toRaw(receiver) orelse return false;
     const raw_sel = selector_mod.toRaw(selector);
@@ -31,9 +34,9 @@ pub fn respondsToSelector(receiver: anytype, selector: anytype) bool {
 /// failures or non-standard method structures skip the check instead of
 /// panicking. No strict mode is provided.
 ///
-/// Panics in Debug/ReleaseSafe if `receiver` is non-nil and does not respond
-/// to `selector`, if no method implementation can be found, or if the runtime
-/// signature is incompatible with the requested Zig signature.
+/// Panics in Debug/ReleaseSafe if `receiver` is non-nil and no method
+/// implementation is found for `selector`, or if the runtime signature is
+/// incompatible with the requested Zig signature.
 pub inline fn sendChecked(
     comptime Return: type,
     receiver: anytype,
@@ -170,16 +173,13 @@ fn checkSignature(
     if (raw_rec == null) return; // nil messaging: no method, nothing to check.
     const raw_sel = selector_mod.toRaw(selector);
 
-    if (!respondsToSelector(receiver, selector)) {
-        std.debug.panic("Objective-C message target does not respond to selector", .{});
-    }
-
     // `object_getClass` yields the dispatch class directly: the class for an
     // instance, the metaclass for a class object (whose instance methods are
-    // the class methods). One lookup covers both receivers.
+    // the class methods). A single method-table lookup both establishes
+    // existence and provides the encoding to check against.
     const cls = raw.runtime.object_getClass(raw_rec.?) orelse return;
     const m = raw.runtime.class_getInstanceMethod(cls, raw_sel) orelse std.debug.panic(
-        "Objective-C message target responds to selector but no Method was found",
+        "Objective-C message target does not respond to selector",
         .{},
     );
 
@@ -254,6 +254,10 @@ test "checkSignatures: table of encoding pairs" {
         .{ .runtime = "v@", .expected = "v@:", .verdict = .skip },
         // Unknown (Clang edge-case) return type fails open.
         .{ .runtime = "16@0:8", .expected = "@@:", .verdict = .match },
+        // Aggregates compare by layout (tag names ignored); pointers recurse.
+        .{ .runtime = "{CGPoint=dd}@:{CGPoint=dd}", .expected = "{CGPoint=dd}@:{CGPoint=dd}", .verdict = .match },
+        .{ .runtime = "v@:{CGPoint=dd}", .expected = "v@:{CGRect={CGPoint=dd}{CGSize=dd}}", .verdict = .{ .argument_mismatch = 0 } },
+        .{ .runtime = "v@:^v", .expected = "v@:^i", .verdict = .{ .argument_mismatch = 0 } },
     };
     for (cases) |c| {
         var runtime_sig = try encoding.parseMethod(allocator, c.runtime);
