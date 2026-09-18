@@ -15,42 +15,6 @@ const ObjectType = types.ObjectType;
 const testing = std.testing;
 const encoder = @import("encoder.zig");
 
-extern fn fixture_encode_char() [*:0]const u8;
-extern fn fixture_encode_uchar() [*:0]const u8;
-extern fn fixture_encode_short() [*:0]const u8;
-extern fn fixture_encode_ushort() [*:0]const u8;
-extern fn fixture_encode_int() [*:0]const u8;
-extern fn fixture_encode_uint() [*:0]const u8;
-extern fn fixture_encode_long() [*:0]const u8;
-extern fn fixture_encode_ulong() [*:0]const u8;
-extern fn fixture_encode_longlong() [*:0]const u8;
-extern fn fixture_encode_ulonglong() [*:0]const u8;
-extern fn fixture_encode_float() [*:0]const u8;
-extern fn fixture_encode_double() [*:0]const u8;
-extern fn fixture_encode_long_double() [*:0]const u8;
-extern fn fixture_encode_bool() [*:0]const u8;
-extern fn fixture_encode_c99_bool() [*:0]const u8;
-extern fn fixture_encode_void() [*:0]const u8;
-extern fn fixture_encode_char_ptr() [*:0]const u8;
-extern fn fixture_encode_const_char_ptr() [*:0]const u8;
-extern fn fixture_encode_void_ptr() [*:0]const u8;
-extern fn fixture_encode_id() [*:0]const u8;
-extern fn fixture_encode_class() [*:0]const u8;
-extern fn fixture_encode_sel() [*:0]const u8;
-extern fn fixture_encode_int_ptr() [*:0]const u8;
-extern fn fixture_encode_int_ptr_ptr() [*:0]const u8;
-extern fn fixture_encode_int_array_4() [*:0]const u8;
-extern fn fixture_encode_float_array_16() [*:0]const u8;
-extern fn fixture_encode_matrix_4_4() [*:0]const u8;
-extern fn fixture_encode_struct_s1() [*:0]const u8;
-extern fn fixture_encode_struct_cgpoint() [*:0]const u8;
-extern fn fixture_encode_union_u1() [*:0]const u8;
-extern fn fixture_encode_struct_nested() [*:0]const u8;
-extern fn fixture_encode_struct_s1_ptr() [*:0]const u8;
-extern fn fixture_encode_struct_s1_ptr_ptr() [*:0]const u8;
-extern fn fixture_encode_block_void() [*:0]const u8;
-extern fn fixture_encode_block_int() [*:0]const u8;
-extern fn fixture_encode_atomic_int() [*:0]const u8;
 
 pub const ParseError = error{
     UnexpectedEnd,
@@ -578,55 +542,5 @@ test "parser: allocation failures clean partial aggregate trees" {
             else => return err,
         }
         try testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
-    }
-}
-
-test "parser: round-trip every Clang fixture encoding" {
-    const fixtures = [_]*const fn () callconv(.c) [*:0]const u8{
-        fixture_encode_char,
-        fixture_encode_uchar,
-        fixture_encode_short,
-        fixture_encode_ushort,
-        fixture_encode_int,
-        fixture_encode_uint,
-        fixture_encode_long,
-        fixture_encode_ulong,
-        fixture_encode_longlong,
-        fixture_encode_ulonglong,
-        fixture_encode_float,
-        fixture_encode_double,
-        fixture_encode_long_double,
-        fixture_encode_bool,
-        fixture_encode_c99_bool,
-        fixture_encode_void,
-        fixture_encode_char_ptr,
-        fixture_encode_const_char_ptr,
-        fixture_encode_void_ptr,
-        fixture_encode_id,
-        fixture_encode_class,
-        fixture_encode_sel,
-        fixture_encode_int_ptr,
-        fixture_encode_int_ptr_ptr,
-        fixture_encode_int_array_4,
-        fixture_encode_float_array_16,
-        fixture_encode_matrix_4_4,
-        fixture_encode_struct_s1,
-        fixture_encode_struct_cgpoint,
-        fixture_encode_union_u1,
-        fixture_encode_struct_nested,
-        fixture_encode_struct_s1_ptr,
-        fixture_encode_struct_s1_ptr_ptr,
-        fixture_encode_block_void,
-        fixture_encode_block_int,
-        fixture_encode_atomic_int,
-    };
-
-    for (fixtures) |fixture| {
-        const original = std.mem.span(fixture());
-        var parsed = try parse(testing.allocator, original);
-        defer parsed.deinit(testing.allocator);
-        const encoded = try encoder.encode(testing.allocator, parsed);
-        defer testing.allocator.free(encoded);
-        try testing.expectEqualStrings(original, encoded);
     }
 }

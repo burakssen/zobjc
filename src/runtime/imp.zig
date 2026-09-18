@@ -10,6 +10,7 @@ const raw = @import("raw");
 
 pub const Imp = struct {
     ptr: *const fn () callconv(.c) void,
+    pub const objc_wrapper = true;
 
     /// Converts a raw nullable `raw.IMP` into an optional `Imp`.
     pub inline fn fromRaw(val: raw.IMP) ?Imp {

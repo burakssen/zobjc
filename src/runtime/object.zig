@@ -19,6 +19,7 @@ const AssociationPolicy = association.AssociationPolicy;
 /// A non-owning, non-null handle to an Objective-C object instance (`id`).
 pub const Object = struct {
     ptr: *raw.objc_object,
+    pub const objc_wrapper = true;
 
     /// Dispatches an Objective-C message to this object.
     pub inline fn send(

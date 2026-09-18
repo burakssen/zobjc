@@ -27,7 +27,10 @@ Intended module dependency DAG (no arrows point upward):
 Rules:
 
 - `raw` mirrors libobjc and must not import `zobjc` or any higher layer.
-- `encoding` and `abi` sit above `raw` only.
+- `internal` holds shared traits (`wrapper`) above `raw` only.
+- `encoding` sits above `raw` + `internal` only: it knows wrapper
+  abstractions (object/class/selector/imp kinds), never `runtime` types by
+  name. `abi` sits above `raw` only.
 - `messaging` sits above `abi` + `encoding` + `raw` and shared traits.
 - `runtime`, `memory`, and `block` sit above `messaging` and traits.
 - The `zobjc` facade (`src/root.zig`) knows every subsystem; no subsystem
@@ -36,8 +39,10 @@ Rules:
 
 Status: the codebase is migrating toward this graph. New code must follow it;
 `raw` is already a leaf (relative imports only, no `zobjc` edge in
-`wireModules()`); remaining `@import("zobjc")` back-edges in higher
-subsystems are being removed incrementally.
+`wireModules()`), and `encoding`/`internal` no longer import `runtime` or
+the facade (`wireModules()` lists only an explicit `legacy_facade_dependents`
+set: abi, block, memory, messaging, runtime). Remaining back-edges are
+removed incrementally, next `abi`.
 
 ## API layers
 

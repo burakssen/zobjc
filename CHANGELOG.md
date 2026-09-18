@@ -19,6 +19,12 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Decoupled `encoding` from `runtime` and the facade via the wrapper trait:
+  the five core handles now carry `objc_wrapper`, `encoder`/`StorageType`/
+  method validation derive handle behavior from wrapper kinds (with a
+  canonical `@:` and a new pure-trait `Imp → ^?` path), live differential
+  tests moved to the facade, and `wireModules()` now lists remaining upward
+  edges explicitly (`abi`, `block`, `memory`, `messaging`, `runtime`).
 - Made `raw.boolResult()` follow C truthiness (`!= 0`) instead of `== 1`,
   so non-canonical signed-char `BOOL` values convert correctly; pinned with
   char-`BOOL`-target regression assertions.

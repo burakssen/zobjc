@@ -20,6 +20,7 @@ const memory = @import("memory");
 
 pub const Class = struct {
     ptr: *raw.objc_class,
+    pub const objc_wrapper = true;
 
     /// Dispatches an Objective-C class message to this class.
     pub inline fn send(

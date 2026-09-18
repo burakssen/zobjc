@@ -31,6 +31,8 @@ fn ptrFieldKind(comptime T: type) WrapperKind {
     if (FieldType == *raw.objc_class) return .class;
     if (FieldType == *raw.objc_selector) return .selector;
     if (FieldType == raw.IMP or FieldType == ?raw.IMP) return .imp;
+    // `Imp.ptr` stores the unwrapped function pointer (same ABI, non-optional).
+    if (FieldType == @typeInfo(raw.IMP).optional.child) return .imp;
     return .none;
 }
 

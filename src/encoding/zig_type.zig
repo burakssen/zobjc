@@ -8,11 +8,6 @@
 const std = @import("std");
 const raw = @import("raw");
 const wrapper = @import("internal").wrapper;
-const Object = @import("runtime").Object;
-const Class = @import("runtime").Class;
-const Selector = @import("runtime").Selector;
-const Imp = @import("runtime").Imp;
-const Protocol = @import("runtime").Protocol;
 
 /// Determines whether `T` is valid for Objective-C type encoding.
 pub fn isObjCEncodable(comptime T: type) bool {
@@ -24,10 +19,8 @@ pub fn isObjCEncodable(comptime T: type) bool {
         else => {},
     }
 
-    // 2. High-level runtime handles
-    if (T == Object or T == ?Object or T == Class or T == ?Class or T == Selector or T == ?Selector) return true;
-
-    // 2b. Explicit wrapper types (framework handles) encode as their wrapped handle.
+    // 2. Explicit wrapper types encode as their wrapped handle, whatever
+    // concrete type provides the marker (runtime handles and custom types).
     if (wrapper.isObjCWrapper(T)) return true;
 
     // 3. Raw handles
@@ -158,11 +151,6 @@ pub fn getAggregateName(comptime T: type) []const u8 {
 /// respective raw pointer types, enums map to their underlying integer tag types, and
 /// primitives/structs map to themselves.
 pub fn StorageType(comptime T: type) type {
-    if (T == Object or T == ?Object) return raw.id;
-    if (T == Class or T == ?Class) return raw.Class;
-    if (T == Selector or T == ?Selector) return raw.SEL;
-    if (T == Imp or T == ?Imp) return raw.IMP;
-    if (T == Protocol or T == ?Protocol) return raw.Protocol;
     if (wrapper.isObjCWrapper(T)) {
         return switch (wrapper.wrapperKind(T)) {
             .object => raw.id,

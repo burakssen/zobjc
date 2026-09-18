@@ -24,6 +24,7 @@ pub const ProtocolPropertyOptions = struct {
 
 pub const Protocol = struct {
     ptr: *raw.objc_object,
+    pub const objc_wrapper = true;
 
     /// Converts a raw nullable `raw.Protocol` into an optional `Protocol`.
     pub inline fn fromRaw(val: raw.Protocol) ?Protocol {

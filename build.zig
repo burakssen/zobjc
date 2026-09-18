@@ -220,10 +220,18 @@ fn wireModules(modules: ModuleSet) void {
     };
     for (subsystems) |subsystem| {
         modules.zobjc.addImport(subsystem.name, subsystem.module);
-        // raw is a leaf: no upward edge (raw files use relative imports).
-        if (subsystem.module != modules.raw) {
-            subsystem.module.addImport("zobjc", modules.zobjc);
-        }
+    }
+    // Temporary: remaining upward facade edges, listed explicitly so future
+    // removals are obvious. encoding, internal, and raw are already clean.
+    const legacy_facade_dependents = [_]*std.Build.Module{
+        modules.abi,
+        modules.block,
+        modules.memory,
+        modules.messaging,
+        modules.runtime,
+    };
+    for (legacy_facade_dependents) |dependent| {
+        dependent.addImport("zobjc", modules.zobjc);
     }
 
     modules.abi.addImport("encoding", modules.encoding);
@@ -241,7 +249,6 @@ fn wireModules(modules: ModuleSet) void {
     modules.block.addImport("runtime", modules.runtime);
 
     modules.encoding.addImport("raw", modules.raw);
-    modules.encoding.addImport("runtime", modules.runtime);
     modules.encoding.addImport("internal", modules.internal);
 
     modules.memory.addImport("raw", modules.raw);

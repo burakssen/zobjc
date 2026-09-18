@@ -16,6 +16,7 @@ pub inline fn sel(sel_name: [:0]const u8) Selector {
 /// A non-owning, non-null typed wrapper representing an Objective-C selector (`SEL`).
 pub const Selector = struct {
     ptr: *raw.objc_selector,
+    pub const objc_wrapper = true;
 
     /// Converts a raw nullable `raw.SEL` into an optional `Selector`.
     pub inline fn fromRaw(val: raw.SEL) ?Selector {
