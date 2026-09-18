@@ -19,6 +19,12 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Decoupled `abi` into a pure compile-time leaf with no `runtime`,
+  `encoding`, `internal`, facade, or `raw` imports: handles classify by
+  machine representation (raw handles and single-pointer wrappers as
+  pointers; aggregates by layout), `assertValidReturn` removed in favor of
+  the single `categorize` accept/reject switch, and handle coverage moved to
+  facade equivalence tests (`returnConvention(T) == returnConvention(raw)`).
 - Made `objc_wrapper = false` an explicit wrapper-trait opt-out (taking
   precedence over inferred conventions) and reject non-boolean marker
   declarations at compile time.

@@ -1,10 +1,6 @@
 //! Comptime type predicates for ABI classification.
 
-const std = @import("std");
-const raw = @import("raw");
-const runtime = @import("runtime");
-
-// Use pure comptime @typeInfo inspection without external dependencies.
+// Pure comptime @typeInfo inspection without external dependencies.
 
 /// Returns true if T is an integer or bool type.
 pub fn isInteger(comptime T: type) bool {
@@ -24,24 +20,17 @@ pub fn isPointer(comptime T: type) bool {
     };
 }
 
-/// Returns true if T is an Objective-C object, class, or selector handle.
-pub fn isObjCObjectHandle(comptime T: type) bool {
-    if (T == runtime.Object or T == ?runtime.Object) return true;
-    if (T == runtime.Class or T == ?runtime.Class) return true;
-    if (T == runtime.Selector or T == ?runtime.Selector) return true;
-    if (T == raw.id or T == raw.Class or T == raw.SEL) return true;
-    if (T == ?*raw.objc_object or T == ?*raw.objc_class or T == ?*raw.objc_selector) return true;
-    if (T == *raw.objc_object or T == *raw.objc_class or T == *raw.objc_selector) return true;
-    switch (@typeInfo(T)) {
-        .optional => |opt| return isObjCObjectHandle(opt.child),
-        .@"struct" => |s| {
-            if (@sizeOf(T) == @sizeOf(usize)) {
-                if (s.fields.len == 1 and isPointer(s.fields[0].type)) return true;
-            }
-        },
-        else => {},
-    }
-    return false;
+/// Returns true for a single-pointer-field struct of pointer size (after
+/// peeling one optional layer): the machine-representation shape shared by
+/// raw handles and small wrapper types. Lets the classifier reason about
+/// representation instead of Objective-C identity.
+pub fn isSinglePointerStruct(comptime T: type) bool {
+    const U = if (@typeInfo(T) == .optional) @typeInfo(T).optional.child else T;
+    if (@typeInfo(U) != .@"struct") return false;
+    if (@sizeOf(U) != @sizeOf(usize)) return false;
+    const fields = @typeInfo(U).@"struct".fields;
+    if (fields.len != 1) return false;
+    return isPointer(fields[0].type);
 }
 
 /// Returns true if T is a standard IEEE floating-point type (f16, f32, f64).
@@ -63,3 +52,4 @@ pub fn isComplexLongDouble(comptime T: type) bool {
     _ = T;
     return false;
 }
+

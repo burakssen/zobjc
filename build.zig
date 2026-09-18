@@ -224,7 +224,6 @@ fn wireModules(modules: ModuleSet) void {
     // Temporary: remaining upward facade edges, listed explicitly so future
     // removals are obvious. encoding, internal, and raw are already clean.
     const legacy_facade_dependents = [_]*std.Build.Module{
-        modules.abi,
         modules.block,
         modules.memory,
         modules.messaging,
@@ -234,10 +233,6 @@ fn wireModules(modules: ModuleSet) void {
         dependent.addImport("zobjc", modules.zobjc);
     }
 
-    modules.abi.addImport("encoding", modules.encoding);
-    modules.abi.addImport("raw", modules.raw);
-    modules.abi.addImport("runtime", modules.runtime);
-    modules.abi.addImport("internal", modules.internal);
 
     modules.internal.addImport("raw", modules.raw);
 

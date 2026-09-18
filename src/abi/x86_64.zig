@@ -17,10 +17,6 @@ pub const eightbyte = @import("x86_64/eightbyte.zig");
 pub const merge = @import("x86_64/merge.zig");
 pub const aggregate = @import("x86_64/aggregate.zig");
 const testing = std.testing;
-const Object = @import("runtime").Object;
-const Class = @import("runtime").Class;
-const Selector = @import("runtime").Selector;
-const raw = @import("raw");
 
 // Clear separation between scalar rules and structural aggregate classification.
 pub fn returnConvention(comptime target: Target, comptime T: type) ReturnConvention {
@@ -31,7 +27,6 @@ pub fn returnConvention(comptime target: Target, comptime T: type) ReturnConvent
         .void,
         .integer,
         .pointer,
-        .objc_object,
         => .normal,
 
         // f32 and f64 are returned in XMM0 (SSE), so they use normal objc_msgSend!
@@ -64,7 +59,6 @@ pub fn classifyReturn(comptime target: Target, comptime T: type) ABIResult {
         .void,
         .integer,
         .pointer,
-        .objc_object,
         .floating,
         .vector,
         => .direct,
@@ -98,18 +92,14 @@ test "x86_64 scalar: void and integers use normal" {
     try testing.expectEqual(.normal, returnConvention(target, usize));
 }
 
-test "x86_64 scalar: pointers and Objective-C handles use normal" {
+test "x86_64 scalar: pointers and pointer-like wrappers use normal" {
     const target = Target.macos_x86_64;
     try testing.expectEqual(.normal, returnConvention(target, *anyopaque));
     try testing.expectEqual(.normal, returnConvention(target, ?*anyopaque));
     try testing.expectEqual(.normal, returnConvention(target, [*:0]const u8));
-    try testing.expectEqual(.normal, returnConvention(target, Object));
-    try testing.expectEqual(.normal, returnConvention(target, ?Object));
-    try testing.expectEqual(.normal, returnConvention(target, Class));
-    try testing.expectEqual(.normal, returnConvention(target, Selector));
-    try testing.expectEqual(.normal, returnConvention(target, raw.id));
-    try testing.expectEqual(.normal, returnConvention(target, raw.Class));
-    try testing.expectEqual(.normal, returnConvention(target, raw.SEL));
+    const PtrWrapper = struct { ptr: *anyopaque };
+    try testing.expectEqual(.normal, returnConvention(target, PtrWrapper));
+    try testing.expectEqual(.normal, returnConvention(target, ?PtrWrapper));
 }
 
 test "x86_64 scalar: f32 and f64 do NOT use fpret" {

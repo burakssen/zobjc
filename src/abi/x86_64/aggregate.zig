@@ -121,7 +121,7 @@ fn classifyLeaf(
 }
 
 fn getLeafClass(comptime T: type) Class {
-    if (traits.isObjCObjectHandle(T) or traits.isPointer(T) or traits.isInteger(T)) {
+    if (traits.isPointer(T) or traits.isInteger(T) or traits.isSinglePointerStruct(T)) {
         return .integer;
     }
     if (T == f32 or T == f64) {

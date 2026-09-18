@@ -11,17 +11,12 @@ const x86_64 = @import("x86_64.zig");
 const layout = @import("layout.zig");
 const diagnostics = @import("diagnostics.zig");
 const testing = std.testing;
-const Object = @import("runtime").Object;
-const Class = @import("runtime").Class;
-const Selector = @import("runtime").Selector;
-const raw = @import("raw");
 
 // Pure compile-time architecture dispatch.
 
 /// Returns the Objective-C runtime return convention for type `T` on `target`.
 pub fn returnConventionFor(comptime target: Target, comptime T: type) ReturnConvention {
     diagnostics.assertValidTarget(target);
-    diagnostics.assertValidReturn(T);
 
     return switch (target.arch) {
         .aarch64 => aarch64.returnConvention(target, T),
@@ -38,7 +33,6 @@ pub fn returnConvention(comptime T: type) ReturnConvention {
 /// Returns the low-level ABI return mechanism (direct vs indirect vs x87) for type `T` on `target`.
 pub fn classifyReturn(comptime target: Target, comptime T: type) ABIResult {
     diagnostics.assertValidTarget(target);
-    diagnostics.assertValidReturn(T);
 
     return switch (target.arch) {
         .aarch64 => aarch64.classifyReturn(target, T),
@@ -151,11 +145,4 @@ test "differential: same-size different-layout 16-byte aggregates" {
     try checkDifferential(LayoutFloatFloat, .normal, .normal);
     try checkDifferential(LayoutFloatInt, .normal, .normal);
     try checkDifferential(LayoutFourFloats, .normal, .normal);
-}
-
-test "differential: representative handle returns use normal" {
-    try checkDifferential(Object, .normal, .normal);
-    try checkDifferential(Class, .normal, .normal);
-    try checkDifferential(Selector, .normal, .normal);
-    try checkDifferential(raw.id, .normal, .normal);
 }

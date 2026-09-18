@@ -383,6 +383,34 @@ test "method: live runtime initializer encoding parses cleanly" {
     try integration_std.testing.expect(sig.arguments.len >= 2);
 }
 
+test "integration: handles classify like raw handles on both macos targets" {
+    const HandlePair = struct { handle: type, raw_handle: type };
+    const pairs = [_]HandlePair{
+        .{ .handle = Object, .raw_handle = raw.id },
+        .{ .handle = ?Object, .raw_handle = raw.id },
+        .{ .handle = Class, .raw_handle = raw.Class },
+        .{ .handle = ?Class, .raw_handle = raw.Class },
+        .{ .handle = Selector, .raw_handle = raw.SEL },
+        .{ .handle = ?Selector, .raw_handle = raw.SEL },
+        .{ .handle = Imp, .raw_handle = raw.IMP },
+        .{ .handle = ?Imp, .raw_handle = raw.IMP },
+        .{ .handle = Protocol, .raw_handle = raw.id },
+        .{ .handle = ?Protocol, .raw_handle = raw.id },
+    };
+    inline for ([_]abi.Target{ abi.Target.macos_arm64, abi.Target.macos_x86_64 }) |target| {
+        inline for (pairs) |pair| {
+            try integration_std.testing.expectEqual(
+                abi.returnConventionFor(target, pair.raw_handle),
+                abi.returnConventionFor(target, pair.handle),
+            );
+            try integration_std.testing.expectEqual(
+                .normal,
+                abi.returnConventionFor(target, pair.handle),
+            );
+        }
+    }
+}
+
 test "integration: real handle encodings match wrapper-trait semantics" {
     const check = struct {
         fn enc(comptime T: type, expected: []const u8) !void {

@@ -12,7 +12,6 @@ const ABIResult = convention.ABIResult;
 const type_mod = @import("type.zig");
 const layout = @import("layout.zig");
 const testing = std.testing;
-const Object = @import("runtime").Object;
 
 // Always .normal for messenger selection on arm64 Darwin.
 pub fn returnConvention(comptime target: Target, comptime T: type) ReturnConvention {
@@ -34,7 +33,6 @@ pub fn classifyReturn(comptime target: Target, comptime T: type) ABIResult {
         .void,
         .integer,
         .pointer,
-        .objc_object,
         .floating,
         .long_double,
         .complex_long_double,
@@ -92,7 +90,9 @@ test "aarch64: all supported returns use normal messenger" {
     try testing.expectEqual(.normal, returnConvention(target, f64));
     try testing.expectEqual(.normal, returnConvention(target, c_longdouble));
     try testing.expectEqual(.normal, returnConvention(target, *anyopaque));
-    try testing.expectEqual(.normal, returnConvention(target, Object));
+    const PtrWrapper = struct { ptr: *anyopaque };
+    try testing.expectEqual(.normal, returnConvention(target, PtrWrapper));
+    try testing.expectEqual(.normal, returnConvention(target, ?PtrWrapper));
 
     const Small = extern struct { a: u64, b: u64 };
     try testing.expectEqual(.normal, returnConvention(target, Small));
