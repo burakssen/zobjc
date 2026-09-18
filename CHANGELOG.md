@@ -20,8 +20,7 @@ All notable changes to zobjc are documented here. Format follows
 ### Fixed
 
 - Broke `runtime` -> `block`: `BlockMethodReplacement` and Block-bridged
-  class enumeration moved into `block` (facade aliases repointed;
-  `runtime.BlockMethodReplacement` now lives at `block.BlockMethodReplacement`).
+  class enumeration moved into `block`.
 - Broke `memory` -> `runtime`: shared `Selector`/`MethodDescription`/
   `PropertyAttribute` now live in `internal` (re-exported by `runtime` with
   unchanged identity), and ownership reconstruction is structural
@@ -108,6 +107,11 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Changed
 
+- Moved `BlockMethodReplacement` from `runtime` to `block` (top-level
+  `objc.BlockMethodReplacement` spelling unchanged) and class enumeration
+  (`enumerateClasses`, `ClassEnumerationOptions`, `ImageFilter`) from
+  `runtime` to `block`, exposed at the top level as `objc.enumerateClasses`
+  etc.; the `objc.runtime.*` paths for these no longer exist.
 - Documented the intended module DAG (`docs/architecture.md`): the `zobjc`
   facade knows every subsystem; no subsystem may import the facade. Legacy
   back-edges are being removed incrementally.

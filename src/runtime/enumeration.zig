@@ -1,13 +1,10 @@
-//! Modern Objective-C class enumeration (`objc_enumerateClasses`).
+//! Availability and raw entry-point resolution for
+//! Objective-C `objc_enumerateClasses`.
 //!
-//! Provides filtered runtime enumeration by image, name prefix, protocol conformance,
-//! and superclass relationship with early stopping and runtime availability detection.
+//! Filtered enumeration itself lives in `block/enumeration.zig`.
 
 const std = @import("std");
-const testing = std.testing;
 const raw = @import("raw");
-const Class = @import("class.zig").Class;
-const Protocol = @import("protocol.zig").Protocol;
 
 pub const EnumerateClassesFn = *const fn (
     image: ?*const anyopaque,

@@ -70,6 +70,9 @@ pub const Swizzle = runtime.Swizzle;
 pub const ScopedSwizzle = runtime.ScopedSwizzle;
 pub const MethodReplacement = runtime.MethodReplacement;
 pub const BlockMethodReplacement = block.BlockMethodReplacement;
+pub const enumerateClasses = block.enumerateClasses;
+pub const ClassEnumerationOptions = block.ClassEnumerationOptions;
+pub const ImageFilter = block.ImageFilter;
 
 test {
     @import("std").testing.refAllDecls(@This());

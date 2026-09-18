@@ -51,7 +51,7 @@ pub fn enumerateClasses(
 
     const RawBlockSig = fn (raw.Class, *raw.BOOL) void;
 
-    // // bridge through createBlock with stack-to-heap promotion
+    // Bridge through createBlock with stack-to-heap promotion.
     var closure_block = try createBlock(
         RawBlockSig,
         Captures,
