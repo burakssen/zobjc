@@ -407,6 +407,10 @@ test "integration: handles classify like raw handles on both macos targets" {
                 .normal,
                 abi.returnConventionFor(target, pair.handle),
             );
+            try integration_std.testing.expectEqual(
+                abi.classifyReturn(target, pair.raw_handle),
+                abi.classifyReturn(target, pair.handle),
+            );
         }
     }
 }

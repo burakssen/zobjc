@@ -40,8 +40,9 @@ pub inline fn categorize(comptime T: type) TypeCategory {
                 @compileError("unsupported type for ABI classification: " ++ @typeName(T)),
             else => @compileError("unsupported type for ABI classification: " ++ @typeName(T)),
         },
-        // Raw handles, single-pointer wrappers, and their optionals behave
-        // as pointers at the machine level.
+        // Optional pointers and optional single-pointer wrappers use pointer
+        // classification. Non-optional wrapper structs stay aggregates below
+        // and classify by their single pointer field.
         .optional => |opt| if (comptime @typeInfo(opt.child) == .pointer or traits.isSinglePointerStruct(opt.child))
             .pointer
         else
@@ -59,4 +60,28 @@ pub inline fn categorize(comptime T: type) TypeCategory {
         .array => .aggregate,
         else => @compileError("unsupported type for ABI classification: " ++ @typeName(T)),
     };
+}
+
+test "categorize: admission table for machine representations" {
+    const testing = @import("std").testing;
+    const Case = struct { T: type, category: TypeCategory };
+    const PtrWrapper = struct { ptr: *anyopaque };
+    const cases = [_]Case{
+        .{ .T = void, .category = .void },
+        .{ .T = c_int, .category = .integer },
+        .{ .T = bool, .category = .integer },
+        .{ .T = f32, .category = .floating },
+        .{ .T = c_longdouble, .category = .long_double },
+        .{ .T = *u8, .category = .pointer },
+        .{ .T = ?*u8, .category = .pointer },
+        .{ .T = [*:0]u8, .category = .pointer },
+        .{ .T = extern struct { a: i32 }, .category = .aggregate },
+        .{ .T = extern union { a: i32, b: f32 }, .category = .aggregate },
+        .{ .T = [4]u8, .category = .aggregate },
+        .{ .T = PtrWrapper, .category = .aggregate },
+        .{ .T = ?PtrWrapper, .category = .pointer },
+    };
+    inline for (cases) |c| {
+        try testing.expectEqual(c.category, categorize(c.T));
+    }
 }

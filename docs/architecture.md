@@ -16,11 +16,12 @@ Intended module dependency DAG (no arrows point upward):
               ▼       ▼        │
              abi   encoding ───┘
               │       │
-              └───┬───┘
-                  ▼
-                 raw
-                  │
-                libobjc
+              │       ▼
+              │      raw
+              │       │
+              │    libobjc
+              │
+       compile-time leaf
 ```
 
 Rules:

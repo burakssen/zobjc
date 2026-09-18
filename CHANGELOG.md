@@ -19,6 +19,8 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Pinned `abi` admission with a `categorize` table test and
+  `classifyReturn` handle/raw equivalence assertions at the facade.
 - Decoupled `abi` into a pure compile-time leaf with no `runtime`,
   `encoding`, `internal`, facade, or `raw` imports: handles classify by
   machine representation (raw handles and single-pointer wrappers as
