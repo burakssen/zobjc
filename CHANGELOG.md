@@ -19,6 +19,11 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Made `methodEncoding()` emit canonical `@:` for the implicit `self`/`_cmd`
+  parameters regardless of Zig receiver type (a `Class` first parameter no
+  longer produces `#:`); generic `comptimeEncode(Class)` still returns `#`.
+  Pinned by unit tests plus a Clang differential test showing instance and
+  class methods on the `ABIFixture` class both hide `self` as `@`.
 - Made the expected `sendChecked` receiver encoding canonical `@` for both
   instance and class receivers (removed the `#` distinction and
   `receiverEncodingChar`), and unified method lookup through

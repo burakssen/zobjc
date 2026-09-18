@@ -178,8 +178,9 @@ pub fn methodEncodingLength(comptime F: type) usize {
         zig_type.assertObjCEncodable(RetType);
 
         var total_len: usize = encoder.encodedLength(RetType);
-        total_len += encoder.encodedLength(p0);
-        total_len += encoder.encodedLength(p1);
+        // Implicit self/._cmd are always '@' + ':' in canonical method
+        // metadata, regardless of the Zig receiver type (Object vs Class).
+        total_len += 2;
         for (fn_info.params[2..]) |param| {
             const PT = param.type orelse @compileError("method parameter must have a type");
             zig_type.assertObjCEncodable(PT);
@@ -203,15 +204,13 @@ pub fn methodEncoding(comptime F: type) [methodEncodingLength(F):0]u8 {
             @memcpy(buf[idx .. idx + ret_enc.len], &ret_enc);
             idx += ret_enc.len;
 
-            const p0 = fn_info.params[0].type.?;
-            const p0_enc = encoder.comptimeEncode(p0);
-            @memcpy(buf[idx .. idx + p0_enc.len], &p0_enc);
-            idx += p0_enc.len;
-
-            const p1 = fn_info.params[1].type.?;
-            const p1_enc = encoder.comptimeEncode(p1);
-            @memcpy(buf[idx .. idx + p1_enc.len], &p1_enc);
-            idx += p1_enc.len;
+            // Canonical method metadata: implicit self is always '@', even for
+            // class receivers; _cmd is always ':'. (A `Class` in any other
+            // position still encodes as '#' via the generic encoder.)
+            buf[idx] = '@';
+            idx += 1;
+            buf[idx] = ':';
+            idx += 1;
 
             for (fn_info.params[2..]) |param| {
                 const p_enc = encoder.comptimeEncode(param.type.?);
@@ -323,9 +322,40 @@ test "method: comptime methodEncoding from Zig callbacks" {
     const enc3 = comptime methodEncoding(StructReturnCallback);
     const enc4 = comptime methodEncoding(RawHandleCallback);
     try testing.expectEqualStrings("v@:i", &enc1);
-    try testing.expectEqualStrings("i#:[4f]", &enc2);
+    try testing.expectEqualStrings("i@:[4f]", &enc2);
     try testing.expectEqualStrings("{Point=dd}@:", &enc3);
     try testing.expectEqualStrings("@@:^v", &enc4);
+}
+
+test "method: implicit self is always @, even for Class receivers" {
+    const InstanceCallback = fn (Object, Selector, i32) callconv(.c) void;
+    const ClassCallback = fn (Class, Selector, i32) callconv(.c) void;
+    try testing.expectEqualStrings("v@:i", &methodEncoding(InstanceCallback));
+    try testing.expectEqualStrings("v@:i", &methodEncoding(ClassCallback));
+    // Generic encoding of Class itself is unchanged.
+    const class_enc = comptime encoder.comptimeEncode(Class);
+    try testing.expectEqualStrings("#", &class_enc);
+}
+
+test "method: clang instance and class methods both hide self as @" {
+    const cls = raw.runtime.objc_getClass("ABIFixture") orelse return error.FixtureNotLinked;
+    const inst_m = raw.runtime.class_getInstanceMethod(
+        cls,
+        raw.objc.sel_registerName("echoInt:"),
+    ) orelse return error.MethodNotFound;
+    const meta = raw.runtime.objc_getMetaClass("ABIFixture") orelse return error.FixtureNotLinked;
+    const class_m = raw.runtime.class_getInstanceMethod(
+        meta,
+        raw.objc.sel_registerName("addInt:to:"),
+    ) orelse return error.MethodNotFound;
+    for ([2]raw.Method{ inst_m, class_m }) |m| {
+        const enc = std.mem.span(raw.runtime.method_getTypeEncoding(m) orelse return error.MethodNotFound);
+        var sig = try parseMethod(testing.allocator, enc);
+        defer sig.deinit(testing.allocator);
+        try sig.validateObjectiveCMethod();
+        try testing.expect(sig.arguments[0].type.type == .object);
+        try testing.expect(sig.arguments[1].type.type == .selector);
+    }
 }
 
 test "method: validate method implementation" {
