@@ -19,6 +19,9 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Added an architecture regression check that rejects subsystem imports of
+  the top-level `zobjc` facade, mechanically enforcing the acyclic module DAG.
+
 - Extracted the facade integration suite from `src/root.zig` into `tests/`
   (`architecture`, `encoding`, `abi`, `messaging`, `runtime_memory`), wired
   as an independent `test-integration` target importing only the public
