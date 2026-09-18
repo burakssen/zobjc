@@ -7,14 +7,18 @@
 - `sendChecked` (safety builds only) additionally:
   1. returns null-object results without touching the runtime,
   2. panics if the target does not respond to the selector,
-  3. looks up the `Method`, parses `method_getTypeEncoding()`, rebuilds the
-     expected `return + self + _cmd + args` encoding from the Zig signature,
-     and panics on mismatch (offsets/frame size ignored).
+  3. looks up the `Method`, parses `method_getTypeEncoding()`, requires the
+     standard receiver/selector-first structure, rebuilds the expected
+     `return + self + _cmd + args` encoding from the Zig signature, and
+     panics on return/arity/argument mismatch (offsets/frame size ignored;
+     explicit arguments compared exactly at `[2..]`, not tail-aligned).
   4. forwards to `send` (zero extra cost in release-fast; no check at all).
 - `sendChecked` is best-effort, not guaranteed: it fails open (skips the
   check, no panic) when the runtime encoding uses a type the parser does not
-  model (`unknown` compares compatible) or when either signature fails to
-  parse (e.g. 2048-byte fixed-buffer OOM). Unknown/missing data never panics.
+  model (`unknown` compares compatible), when either signature fails to
+  parse (e.g. 2048-byte fixed-buffer OOM), or when the runtime encoding
+  lacks the standard receiver/selector-first structure.
+  Unknown/missing/non-standard data never panics.
 - Differential gates that must stay green:
   - `encoding`: `checkDifferential(raw.BOOL, fixture_encode_bool)` pins the
     platform `BOOL` encoding per toolchain (`B` on macOS arm64 and 64-bit

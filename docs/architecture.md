@@ -35,8 +35,9 @@ Rules:
   (no `subsystem.addImport("zobjc", ...)`).
 
 Status: the codebase is migrating toward this graph. New code must follow it;
-legacy `@import("zobjc")` back-edges inside subsystems are being removed
-incrementally (raw layer first).
+`raw` is already a leaf (relative imports only, no `zobjc` edge in
+`wireModules()`); remaining `@import("zobjc")` back-edges in higher
+subsystems are being removed incrementally.
 
 ## API layers
 

@@ -19,6 +19,14 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Fixed a misleading `sendChecked` comment claiming some runtime encodings
+  (e.g. `+alloc` as `@16@0:8`) omit `_cmd`; `@0` is `self` and `:8` is
+  `_cmd`. The check now gates on the standard receiver/selector-first
+  structure (failing open otherwise) and compares explicit arguments exactly
+  at `[2..]` instead of tail-aligned.
+- Removed the `raw` -> `zobjc` module back-edge: `raw` sources now use
+  relative imports and `wireModules()` adds no upward edge for `raw`, the
+  first step toward the documented dependency DAG.
 - Fixed CI bootstrap: `mlugg/setup-zig@v1` 404s on Zig 0.16.0; moved to
   `mlugg/setup-zig@v2`.
 - Added native x86-64 CI coverage (`macos-15-intel`) alongside arm64

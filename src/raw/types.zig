@@ -6,7 +6,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const testing = std.testing;
-const raw = @import("zobjc").raw;
+const raw = @import("root.zig");
 
 // --- Opaque runtime structures ---
 

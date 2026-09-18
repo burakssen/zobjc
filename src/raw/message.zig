@@ -7,7 +7,7 @@
 const availability = @import("availability.zig");
 const std = @import("std");
 const testing = std.testing;
-const raw = @import("zobjc").raw;
+const raw = @import("root.zig");
 
 // --- Universal Messaging Primitives ---
 

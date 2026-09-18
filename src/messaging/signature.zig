@@ -29,9 +29,9 @@ pub fn respondsToSelector(receiver: anytype, selector: anytype) bool {
 /// frame size ignored) and panics on mismatch. Ordinary `send()` remains the
 /// zero-overhead expert API with no runtime lookup.
 ///
-/// Best-effort only: unknown runtime types compare compatible and parse/OOM
-/// failures skip the check instead of panicking.
-/// // ponytail: docs only, no stricter mode — YAGNI, std lib has no equivalent
+/// Best-effort only: unknown runtime types compare compatible, and parse/OOM
+/// failures or non-standard method structures skip the check instead of
+/// panicking. No strict mode is provided.
 ///
 /// Panics in Debug/ReleaseSafe if `receiver` is non-nil and does not respond
 /// to `selector`, if no method implementation can be found, or if the runtime
@@ -198,21 +198,21 @@ fn checkSignature(
             .{ runtime_enc, expected_enc },
         );
     }
-    // Compare explicit arguments tail-aligned. The runtime is authoritative
-    // about types but quirky about layout: some methods (e.g. `+alloc` with
-    // `@16@0:8`) omit `_cmd` from their encoding, and `self` is recorded as
-    // `@` even for class methods. Selector colon validation in `send()` already
-    // guarantees the caller passed the right *number* of explicit arguments,
-    // so what remains is checking their *types*: the last K runtime arguments
-    // must match the K explicit Zig arguments.
-    const expected_explicit = expected_sig.arguments.len - 2;
-    if (runtime_sig.arguments.len < expected_explicit) {
+    // Standard method encodings always lead with `self` (`@` for instances,
+    // `#` for classes) and `_cmd` (`:`): e.g. `+alloc` is `@16@0:8`, where
+    // `@0` is self and `:8` is _cmd. Gate on that structure first and fail
+    // open for anything non-standard. Selector colon validation in `send()`
+    // already guarantees the caller-side explicit argument count, so a
+    // standard runtime encoding must then match exactly: same arity, with the
+    // explicit arguments compared at [2..] instead of tail-aligned.
+    runtime_sig.validateObjectiveCMethod() catch return;
+    if (runtime_sig.arguments.len != expected_sig.arguments.len) {
         std.debug.panic(
             "Objective-C argument count mismatch: runtime '{s}' vs requested '{s}'",
             .{ runtime_enc, expected_enc },
         );
     }
-    const runtime_explicit = runtime_sig.arguments[runtime_sig.arguments.len - expected_explicit ..];
+    const runtime_explicit = runtime_sig.arguments[2..];
     const requested_explicit = expected_sig.arguments[2..];
     for (runtime_explicit, requested_explicit, 0..) |ra, ea, i| {
         if (!typesCompatible(ra.type.type, ea.type.type)) {

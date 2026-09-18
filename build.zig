@@ -86,6 +86,9 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 
     const test_modules = createTestModules(b, target, optimize);
+    // raw tests call libobjc directly; link it explicitly now that raw no
+    // longer imports the facade (which previously provided it transitively).
+    test_modules.raw.linkSystemLibrary("objc", .{});
     const test_targets = [_]struct {
         name: []const u8,
         module: *std.Build.Module,
@@ -217,7 +220,10 @@ fn wireModules(modules: ModuleSet) void {
     };
     for (subsystems) |subsystem| {
         modules.zobjc.addImport(subsystem.name, subsystem.module);
-        subsystem.module.addImport("zobjc", modules.zobjc);
+        // raw is a leaf: no upward edge (raw files use relative imports).
+        if (subsystem.module != modules.raw) {
+            subsystem.module.addImport("zobjc", modules.zobjc);
+        }
     }
 
     modules.abi.addImport("encoding", modules.encoding);
@@ -253,8 +259,6 @@ fn wireModules(modules: ModuleSet) void {
     modules.runtime.addImport("memory", modules.memory);
     modules.runtime.addImport("messaging", modules.messaging);
     modules.runtime.addImport("raw", modules.raw);
-
-    modules.raw.addImport("zobjc", modules.zobjc);
 }
 
 fn addTestFixtures(module: *std.Build.Module, b: *std.Build) void {

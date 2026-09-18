@@ -4,7 +4,7 @@
 
 const std = @import("std");
 const testing = std.testing;
-const raw = @import("zobjc").raw;
+const raw = @import("root.zig");
 
 /// Flags passed to _Block_object_assign and _Block_object_dispose.
 ///
