@@ -86,23 +86,6 @@ test "independent module compilation" {
     _ = @import("internal");
 }
 
-test "facade boolean helpers convert between BOOL and bool" {
-    const testing = @import("std").testing;
-    try testing.expect(raw.boolResult(raw.YES));
-    try testing.expect(!raw.boolResult(raw.NO));
-
-    try testing.expectEqual(raw.YES, raw.boolParam(true));
-    try testing.expectEqual(raw.NO, raw.boolParam(false));
-
-    // Non-canonical signed-char values follow C truthiness, not == YES.
-    if (raw.BOOL != bool) {
-        try testing.expect(!raw.boolResult(@as(raw.BOOL, 0)));
-        try testing.expect(raw.boolResult(@as(raw.BOOL, 1)));
-        try testing.expect(raw.boolResult(@as(raw.BOOL, 2)));
-        try testing.expect(raw.boolResult(@as(raw.BOOL, -1)));
-    }
-}
-
 test "raw can be accessed independently" {
     _ = raw;
     _ = raw.objc;

@@ -59,3 +59,19 @@ pub inline fn boolParam(param: bool) BOOL {
 test {
     @import("std").testing.refAllDecls(@This());
 }
+
+test "BOOL conversions follow C truthiness" {
+    const testing = @import("std").testing;
+
+    try testing.expect(boolResult(YES));
+    try testing.expect(!boolResult(NO));
+    try testing.expectEqual(YES, boolParam(true));
+    try testing.expectEqual(NO, boolParam(false));
+
+    if (BOOL != bool) {
+        try testing.expect(!boolResult(@as(BOOL, 0)));
+        try testing.expect(boolResult(@as(BOOL, 1)));
+        try testing.expect(boolResult(@as(BOOL, 2)));
+        try testing.expect(boolResult(@as(BOOL, -1)));
+    }
+}
