@@ -5,7 +5,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const Class = @import("class.zig").Class;
 const Protocol = @import("protocol.zig").Protocol;
@@ -148,77 +147,3 @@ test "class enumeration: prefix filter" {
     try testing.expect(all_start_with_dealloc);
 }
 
-test "class enumeration: protocol filter" {
-    if (!hasClassEnumeration()) return;
-    const NSCopying = objc.getProtocol("NSCopying") orelse return;
-
-    var count: usize = 0;
-    var all_conform = true;
-    var ctx = struct {
-        cnt: *usize,
-        matched: *bool,
-        proto: Protocol,
-    }{ .cnt = &count, .matched = &all_conform, .proto = NSCopying };
-
-    try enumerateClasses(.{ .conforming_to = NSCopying }, &ctx, struct {
-        fn cb(c: anytype, cls: Class) bool {
-            c.cnt.* += 1;
-            if (!cls.conformsTo(c.proto)) {
-                c.matched.* = false;
-                return false;
-            }
-            return c.cnt.* < 15;
-        }
-    }.cb);
-
-    try testing.expect(count > 0);
-    try testing.expect(all_conform);
-}
-
-test "class enumeration: superclass filter" {
-    if (!hasClassEnumeration()) return;
-    const NSObject = objc.requireClass("NSObject");
-
-    var count: usize = 0;
-    var all_subclasses = true;
-    var ctx = struct {
-        cnt: *usize,
-        matched: *bool,
-        super_cls: Class,
-    }{ .cnt = &count, .matched = &all_subclasses, .super_cls = NSObject };
-
-    try enumerateClasses(.{ .subclassing = NSObject }, &ctx, struct {
-        fn cb(c: anytype, cls: Class) bool {
-            c.cnt.* += 1;
-            if (!cls.isSubclassOf(c.super_cls)) {
-                c.matched.* = false;
-                return false;
-            }
-            return c.cnt.* < 20;
-        }
-    }.cb);
-
-    try testing.expect(count > 0);
-    try testing.expect(all_subclasses);
-}
-
-test "class enumeration: dynamic class filter" {
-    if (!hasClassEnumeration()) return;
-
-    const NSObject = objc.requireClass("NSObject");
-    const dyn_cls = objc.allocateClassPair(NSObject, "EnumTestDynamicClass").?;
-    objc.registerClassPair(dyn_cls);
-    defer objc.disposeClassPair(dyn_cls);
-
-    var found_dyn = false;
-    try enumerateClasses(.{ .image = .dynamic }, &found_dyn, struct {
-        fn cb(found: *bool, cls: Class) bool {
-            if (std.mem.eql(u8, cls.name(), "EnumTestDynamicClass")) {
-                found.* = true;
-                return false;
-            }
-            return true;
-        }
-    }.cb);
-    try testing.expect(found_dyn);
-}

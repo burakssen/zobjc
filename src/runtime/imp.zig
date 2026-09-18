@@ -5,7 +5,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 
 pub const Imp = struct {
@@ -55,12 +54,6 @@ pub const Imp = struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.IMP));
     }
 };
-
-test "conversion: Imp fromRaw and toRaw roundtrip" {
-    const imp = objc.requireClass("NSObject").methodImplementation(objc.sel("init")).?;
-    try testing.expect(imp.eql(Imp.fromRaw(imp.toRaw()).?));
-    try testing.expectEqual(@as(?Imp, null), Imp.fromRaw(null));
-}
 
 test "handle: Imp is pointer-sized and pointer-aligned" {
     try testing.expectEqual(@sizeOf(usize), @sizeOf(Imp));

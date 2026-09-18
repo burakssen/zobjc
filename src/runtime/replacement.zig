@@ -3,9 +3,6 @@
 //! Replaces method implementations with raw IMPs, Zig callbacks, or Blocks,
 //! verifying that no intervening modifications occurred before restoration.
 
-const std = @import("std");
-const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const Method = @import("method.zig").Method;
 const Imp = @import("imp.zig").Imp;
@@ -85,82 +82,4 @@ pub const BlockMethodReplacement = struct {
     }
 };
 
-fn setupReplacementClass(name: [:0]const u8) !struct { cls: objc.Class, inst: objc.Object } {
-    const super_cls = objc.requireClass("NSObject");
-    const dyn_cls = raw.runtime.objc_allocateClassPair(super_cls.toRaw(), name.ptr, 0) orelse
-        return error.ClassAllocFailed;
 
-    const original_imp = struct {
-        fn call(self: raw.id, sel_val: raw.SEL) callconv(.c) c_int {
-            _ = self;
-            _ = sel_val;
-            return 100;
-        }
-    }.call;
-    _ = raw.runtime.class_addMethod(dyn_cls, objc.sel("methodA").toRaw(), @ptrCast(&original_imp), "i@:");
-    raw.runtime.objc_registerClassPair(dyn_cls);
-
-    const cls = objc.Class.fromRaw(dyn_cls).?;
-    const inst = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    return .{ .cls = cls, .inst = inst };
-}
-
-test "method replacement: replaceWith and conflict detection" {
-    const env = try setupReplacementClass("ReplacementClass");
-    defer {
-        env.inst.send(void, "dealloc", .{});
-        objc.disposeClassPair(env.cls);
-    }
-
-    const method = env.cls.instanceMethod(objc.sel("methodA")).?;
-    const custom_imp = struct {
-        fn call(self: raw.id, sel_val: raw.SEL) callconv(.c) c_int {
-            _ = self;
-            _ = sel_val;
-            return 999;
-        }
-    }.call;
-    var replacement = MethodReplacement.replace(method, Imp.fromRawNonNull(@ptrCast(&custom_imp)));
-    try testing.expectEqual(@as(c_int, 999), objc.send(c_int, env.inst, "methodA", .{}));
-    try replacement.restore();
-    try testing.expectEqual(@as(c_int, 100), objc.send(c_int, env.inst, "methodA", .{}));
-
-    const second_imp = struct {
-        fn call(self: raw.id, sel_val: raw.SEL) callconv(.c) c_int {
-            _ = self;
-            _ = sel_val;
-            return 888;
-        }
-    }.call;
-    var replacement_two = MethodReplacement.replace(method, Imp.fromRawNonNull(@ptrCast(&second_imp)));
-    const intervening_imp = struct {
-        fn call(self: raw.id, sel_val: raw.SEL) callconv(.c) c_int {
-            _ = self;
-            _ = sel_val;
-            return 777;
-        }
-    }.call;
-    _ = method.setImplementation(Imp.fromRawNonNull(@ptrCast(&intervening_imp)));
-    try testing.expectError(error.ImplementationChanged, replacement_two.restore());
-}
-
-test "method replacement: BlockMethodReplacement" {
-    const env = try setupReplacementClass("BlockReplacementClass");
-    defer {
-        env.inst.send(void, "dealloc", .{});
-        objc.disposeClassPair(env.cls);
-    }
-
-    const method = env.cls.instanceMethod(objc.sel("methodA")).?;
-    var block_handle = try objc.OwnedBlock(fn (objc.Object) c_int).fromFunction(struct {
-        fn blockImp(_: objc.Object) c_int {
-            return 555;
-        }
-    }.blockImp);
-    defer block_handle.deinit();
-
-    var replacement = try BlockMethodReplacement.replace(method, block_handle);
-    try testing.expectEqual(@as(c_int, 555), objc.send(c_int, env.inst, "methodA", .{}));
-    try replacement.restore();
-    try testing.expectEqual(@as(c_int, 100), objc.send(c_int, env.inst, "methodA", .{}));
-}

@@ -4,7 +4,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const Class = @import("class.zig").Class;
 const Protocol = @import("protocol.zig").Protocol;

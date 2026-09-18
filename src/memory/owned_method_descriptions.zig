@@ -5,7 +5,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const MethodDescription = @import("runtime").MethodDescription;
 const c_free = @import("c_free.zig");
@@ -74,20 +73,6 @@ pub const OwnedMethodDescriptions = struct {
         }
     }
 };
-
-test "OwnedMethodDescriptions: protocol.methodDescriptions" {
-    const proto = objc.getProtocol("NSObject").?;
-    var req_methods = proto.methodDescriptions(.{ .required = true, .instance = true });
-    defer req_methods.deinit();
-    try testing.expect(!req_methods.isEmpty());
-    try testing.expect(req_methods.count() > 0);
-    try testing.expect(req_methods.get(0).?.selector.?.name().len > 0);
-
-    var count: usize = 0;
-    var iter = req_methods.iterator();
-    while (iter.next()) |_| count += 1;
-    try testing.expectEqual(req_methods.count(), count);
-}
 
 test "OwnedMethodDescriptions: empty representation" {
     var empty_methods = OwnedMethodDescriptions.empty();

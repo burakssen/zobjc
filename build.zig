@@ -92,6 +92,10 @@ pub fn build(b: *std.Build) void {
     // Standalone messaging tests exercise raw runtime helpers directly now
     // that the facade edge is gone (same treatment as raw above).
     test_modules.messaging.linkSystemLibrary("objc", .{});
+    // Same for runtime/memory: their remaining unit tests call libobjc
+    // directly (conversion/layout/size checks stay in-module).
+    test_modules.runtime.linkSystemLibrary("objc", .{});
+    test_modules.memory.linkSystemLibrary("objc", .{});
     const test_targets = [_]struct {
         name: []const u8,
         module: *std.Build.Module,
@@ -225,11 +229,10 @@ fn wireModules(modules: ModuleSet) void {
         modules.zobjc.addImport(subsystem.name, subsystem.module);
     }
     // Temporary: remaining upward facade edges, listed explicitly so future
-    // removals are obvious. abi, encoding, internal, and raw are already clean.
+    // removals are obvious. abi, encoding, internal, messaging, memory, raw,
+    // and runtime are already clean; only block remains.
     const legacy_facade_dependents = [_]*std.Build.Module{
         modules.block,
-        modules.memory,
-        modules.runtime,
     };
     for (legacy_facade_dependents) |dependent| {
         dependent.addImport("zobjc", modules.zobjc);

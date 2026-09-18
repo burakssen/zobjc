@@ -4,7 +4,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const conversion = @import("conversion.zig");
 

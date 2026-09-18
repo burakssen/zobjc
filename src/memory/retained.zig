@@ -3,9 +3,6 @@
 //! A `Retained(T)` owns exactly one +1 reference to an Objective-C object.
 //! Deinitializing it releases that reference via `objc_release`.
 
-const std = @import("std");
-const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const traits = @import("traits.zig");
 
@@ -97,118 +94,6 @@ pub fn Retained(comptime T: type) type {
     };
 }
 
-var g_dealloc_count: usize = 0;
-var g_super_dealloc_fn: ?*const fn (objc.raw.id, objc.raw.SEL) callconv(.c) void = null;
 
-fn customDealloc(self_id: objc.raw.id, sel_val: objc.raw.SEL) callconv(.c) void {
-    g_dealloc_count += 1;
-    if (g_super_dealloc_fn) |super_fn| super_fn(self_id, sel_val);
-}
 
-fn getOrCreateTestClass() objc.Class {
-    const class_name = "RetainedLifecycleTestClass";
-    if (objc.getClass(class_name)) |existing| return existing;
 
-    const NSObject = objc.requireClass("NSObject");
-    const cls = objc.allocateClassPair(NSObject, class_name).?;
-    g_super_dealloc_fn = @ptrCast(NSObject.instanceMethod(objc.sel("dealloc")).?.implementation().toRaw());
-    _ = cls.addMethod(objc.sel("dealloc"), objc.Imp.fromRawNonNull(@ptrCast(&customDealloc)), "v@:");
-    objc.registerClassPair(cls);
-    return cls;
-}
-
-test "Retained: compile-time retainable traits" {
-    const traits_mod = objc.memory.traits;
-    try testing.expect(traits_mod.isRetainable(objc.Object));
-    try testing.expect(!traits_mod.isRetainable(objc.Class));
-    try testing.expect(!traits_mod.isRetainable(i32));
-}
-
-test "Retained: adopt takes ownership and deinit releases" {
-    const cls = getOrCreateTestClass();
-    const initial_count = g_dealloc_count;
-    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    var retained = Retained(objc.Object).adopt(raw_obj);
-    try testing.expectEqual(initial_count, g_dealloc_count);
-    try testing.expectEqual(raw_obj.toRaw(), retained.borrow().toRaw());
-    retained.deinit();
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-    retained.deinit();
-}
-
-test "Retained: retain increments retain count" {
-    const cls = getOrCreateTestClass();
-    const initial_count = g_dealloc_count;
-    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    var r1 = Retained(objc.Object).adopt(raw_obj);
-    var r2 = Retained(objc.Object).retain(r1.borrow());
-    r1.deinit();
-    try testing.expectEqual(initial_count, g_dealloc_count);
-    r2.deinit();
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-}
-
-test "Retained: clone increments retain count" {
-    const cls = getOrCreateTestClass();
-    const initial_count = g_dealloc_count;
-    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    var r1 = Retained(objc.Object).adopt(raw_obj);
-    var r2 = r1.clone();
-    r1.deinit();
-    try testing.expectEqual(initial_count, g_dealloc_count);
-    r2.deinit();
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-}
-
-test "Retained: intoUnmanaged relinquishes ownership without releasing" {
-    const cls = getOrCreateTestClass();
-    const initial_count = g_dealloc_count;
-    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    var retained = Retained(objc.Object).adopt(raw_obj);
-    const unmanaged = retained.intoUnmanaged();
-    retained.deinit();
-    try testing.expectEqual(initial_count, g_dealloc_count);
-    _ = objc.raw.compiler_runtime.objc_release(unmanaged.toRaw());
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-}
-
-test "Retained: retainOptional and adoptOptional" {
-    const cls = getOrCreateTestClass();
-    const initial_count = g_dealloc_count;
-    try testing.expect(Retained(objc.Object).adoptOptional(null) == null);
-    try testing.expect(Retained(objc.Object).retainOptional(null) == null);
-
-    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    if (Retained(objc.Object).adoptOptional(raw_obj)) |*retained| {
-        var mutable = retained.*;
-        defer mutable.deinit();
-        try testing.expectEqual(raw_obj.toRaw(), mutable.borrow().toRaw());
-    } else return error.UnexpectedNull;
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-}
-
-test "Retained: createInstanceRetained on Class" {
-    const cls = getOrCreateTestClass();
-    const initial_count = g_dealloc_count;
-    var retained = cls.createInstanceRetained(0).?;
-    _ = retained.borrow().send(objc.Object, "init", .{});
-    retained.deinit();
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-}
-
-fn consumeThroughPointer(owner: *Retained(objc.Object)) void {
-    // Recommended pattern: owners travel by pointer, never by value.
-    owner.deinit();
-}
-
-test "Retained: pointer-passing invalidates owner without copying" {
-    const cls = getOrCreateTestClass();
-    const initial_count = g_dealloc_count;
-    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    var retained = Retained(objc.Object).adopt(raw_obj);
-    consumeThroughPointer(&retained);
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-    // Second deinit on the same (now empty) value is a safe no-op.
-    retained.deinit();
-    try testing.expectEqual(initial_count + 1, g_dealloc_count);
-}

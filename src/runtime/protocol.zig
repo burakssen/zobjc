@@ -4,7 +4,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const conversion = @import("conversion.zig");
 const Selector = @import("selector.zig").Selector;
@@ -124,37 +123,6 @@ pub const Protocol = struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.Protocol));
     }
 };
-
-test "protocol: NSObject protocol introspection" {
-    const proto = objc.getProtocol("NSObject") orelse return error.ProtocolNotFound;
-    try testing.expectEqualStrings("NSObject", proto.name());
-    try testing.expect(proto.eql(objc.getProtocol("NSObject").?));
-    try testing.expect(proto.conformsTo(proto));
-
-    const desc = proto.methodDescription(objc.sel("description"), .{
-        .required = true,
-        .instance = true,
-    });
-    try testing.expect(desc != null);
-    try testing.expect(desc.?.selector != null);
-    try testing.expect(desc.?.selector.?.eql(objc.sel("description")));
-
-    try testing.expectEqual(
-        @as(?objc.MethodDescription, null),
-        proto.methodDescription(objc.sel("nonExistentSelector123"), .{}),
-    );
-}
-
-test "protocol: requireProtocol succeeds on valid protocol" {
-    const proto = objc.requireProtocol("NSObject");
-    try testing.expectEqualStrings("NSObject", proto.name());
-}
-
-test "conversion: Protocol fromRaw and toRaw roundtrip" {
-    const proto = objc.getProtocol("NSObject").?;
-    try testing.expect(proto.eql(Protocol.fromRaw(proto.toRaw()).?));
-    try testing.expectEqual(@as(?Protocol, null), Protocol.fromRaw(null));
-}
 
 test "handle: Protocol is pointer-sized and pointer-aligned" {
     try testing.expectEqual(@sizeOf(usize), @sizeOf(Protocol));

@@ -4,7 +4,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const conversion = @import("conversion.zig");
 const Class = @import("class.zig").Class;
@@ -232,74 +231,6 @@ pub const Object = struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.id));
     }
 };
-
-test "object: instance class and identity" {
-    const cls = objc.requireClass("NSObject");
-    const obj1 = cls.send(Object, "alloc", .{})
-        .send(Object, "init", .{});
-    defer obj1.send(void, "dealloc", .{});
-
-    const obj2 = cls.send(Object, "alloc", .{})
-        .send(Object, "init", .{});
-    defer obj2.send(void, "dealloc", .{});
-
-    try testing.expect(obj1.class().eql(cls));
-    try testing.expectEqualStrings("NSObject", obj1.className());
-    try testing.expect(!obj1.isClass());
-    try testing.expect(obj1.eql(obj1));
-    try testing.expect(!obj1.eql(obj2));
-}
-
-test "object: setClass dynamic isa swizzling" {
-    const Base = objc.requireClass("NSObject");
-    const Subclass = objc.allocateClassPair(Base, "ObjectSetClassSubclass").?;
-    objc.registerClassPair(Subclass);
-    defer objc.disposeClassPair(Subclass);
-
-    const obj = Base.send(Object, "alloc", .{})
-        .send(Object, "init", .{});
-    defer obj.send(void, "dealloc", .{});
-
-    try testing.expect(obj.class().eql(Base));
-    const old_cls = obj.setClass(Subclass);
-    try testing.expect(old_cls.eql(Base));
-    try testing.expect(obj.class().eql(Subclass));
-    _ = obj.setClass(Base);
-}
-
-test "object: getIvar and setIvar" {
-    const Base = objc.requireClass("NSObject");
-    const Subclass = objc.allocateClassPair(Base, "ObjectIvarTestClass").?;
-    _ = Subclass.addIvar("_child", @sizeOf(raw.id), @truncate(std.math.log2(@alignOf(raw.id))), "@");
-    objc.registerClassPair(Subclass);
-    defer objc.disposeClassPair(Subclass);
-
-    const ivar = Subclass.instanceIvar("_child").?;
-    const parent = Subclass.send(Object, "alloc", .{})
-        .send(Object, "init", .{});
-    defer parent.send(void, "dealloc", .{});
-    const child = Base.send(Object, "alloc", .{})
-        .send(Object, "init", .{});
-    defer child.send(void, "dealloc", .{});
-
-    try testing.expectEqual(@as(?Object, null), parent.getIvar(ivar));
-    parent.setIvar(ivar, child);
-    try testing.expectEqual(child.ptr, parent.getIvar(ivar).?.ptr);
-    parent.setIvar(ivar, null);
-    try testing.expectEqual(@as(?Object, null), parent.getIvar(ivar));
-}
-
-test "conversion: Object fromRaw and toRaw roundtrip" {
-    const cls = objc.requireClass("NSObject");
-    const obj = cls.send(Object, "alloc", .{}).send(Object, "init", .{});
-    defer obj.send(void, "dealloc", .{});
-
-    const raw_id = obj.toRaw();
-    try testing.expect(raw_id != null);
-    try testing.expect(obj.eql(Object.fromRaw(raw_id).?));
-    try testing.expect(obj.eql(Object.fromRawNonNull(raw_id.?)));
-    try testing.expectEqual(@as(?Object, null), Object.fromRaw(null));
-}
 
 test "handle: Object is pointer-sized and pointer-aligned" {
     try testing.expectEqual(@sizeOf(usize), @sizeOf(Object));

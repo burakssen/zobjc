@@ -4,8 +4,6 @@
 //! signature compatibility checks, and test-scoped RAII helpers.
 
 const std = @import("std");
-const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const Method = @import("method.zig").Method;
 const encoding = @import("encoding");
@@ -80,90 +78,4 @@ pub const ScopedSwizzle = struct {
     }
 };
 
-fn setupSwizzleClass(name: [:0]const u8) !struct { cls: objc.Class, inst: objc.Object } {
-    const super_cls = objc.requireClass("NSObject");
-    const dyn_cls = raw.runtime.objc_allocateClassPair(super_cls.toRaw(), name.ptr, 0) orelse
-        return error.ClassAllocFailed;
 
-    const fn_a = struct {
-        fn imp(self: raw.id, sel_val: raw.SEL) callconv(.c) c_int {
-            _ = self;
-            _ = sel_val;
-            return 100;
-        }
-    }.imp;
-    const fn_b = struct {
-        fn imp(self: raw.id, sel_val: raw.SEL) callconv(.c) c_int {
-            _ = self;
-            _ = sel_val;
-            return 200;
-        }
-    }.imp;
-    const fn_mismatched = struct {
-        fn imp(self: raw.id, sel_val: raw.SEL) callconv(.c) f32 {
-            _ = self;
-            _ = sel_val;
-            return 1.5;
-        }
-    }.imp;
-
-    _ = raw.runtime.class_addMethod(dyn_cls, objc.sel("methodA").toRaw(), @ptrCast(&fn_a), "i@:");
-    _ = raw.runtime.class_addMethod(dyn_cls, objc.sel("methodB").toRaw(), @ptrCast(&fn_b), "i@:");
-    _ = raw.runtime.class_addMethod(dyn_cls, objc.sel("methodMismatched").toRaw(), @ptrCast(&fn_mismatched), "f@:");
-    raw.runtime.objc_registerClassPair(dyn_cls);
-
-    const cls = objc.Class.fromRaw(dyn_cls).?;
-    const inst = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    return .{ .cls = cls, .inst = inst };
-}
-
-test "swizzle: basic swap and restore" {
-    const env = try setupSwizzleClass("SwizzleBasicClass");
-    defer {
-        env.inst.send(void, "dealloc", .{});
-        objc.disposeClassPair(env.cls);
-    }
-
-    try testing.expectEqual(@as(c_int, 100), objc.send(c_int, env.inst, "methodA", .{}));
-    try testing.expectEqual(@as(c_int, 200), objc.send(c_int, env.inst, "methodB", .{}));
-    var swiz = Swizzle.install(env.cls.instanceMethod(objc.sel("methodA")).?, env.cls.instanceMethod(objc.sel("methodB")).?);
-    try testing.expectEqual(@as(c_int, 200), objc.send(c_int, env.inst, "methodA", .{}));
-    try testing.expectEqual(@as(c_int, 100), objc.send(c_int, env.inst, "methodB", .{}));
-    swiz.restore();
-    try testing.expectEqual(@as(c_int, 100), objc.send(c_int, env.inst, "methodA", .{}));
-    try testing.expectEqual(@as(c_int, 200), objc.send(c_int, env.inst, "methodB", .{}));
-}
-
-test "swizzle: scoped RAII swizzling" {
-    const env = try setupSwizzleClass("SwizzleScopedClass");
-    defer {
-        env.inst.send(void, "dealloc", .{});
-        objc.disposeClassPair(env.cls);
-    }
-
-    const m_a = env.cls.instanceMethod(objc.sel("methodA")).?;
-    const m_b = env.cls.instanceMethod(objc.sel("methodB")).?;
-    {
-        var scoped = ScopedSwizzle.init(m_a, m_b);
-        defer scoped.deinit();
-        try testing.expectEqual(@as(c_int, 200), objc.send(c_int, env.inst, "methodA", .{}));
-        try testing.expectEqual(@as(c_int, 100), objc.send(c_int, env.inst, "methodB", .{}));
-    }
-    try testing.expectEqual(@as(c_int, 100), objc.send(c_int, env.inst, "methodA", .{}));
-    try testing.expectEqual(@as(c_int, 200), objc.send(c_int, env.inst, "methodB", .{}));
-}
-
-test "swizzle: installChecked signature validation" {
-    const env = try setupSwizzleClass("SwizzleCheckedClass");
-    defer {
-        env.inst.send(void, "dealloc", .{});
-        objc.disposeClassPair(env.cls);
-    }
-
-    const m_a = env.cls.instanceMethod(objc.sel("methodA")).?;
-    const m_b = env.cls.instanceMethod(objc.sel("methodB")).?;
-    const mismatched = env.cls.instanceMethod(objc.sel("methodMismatched")).?;
-    var swiz = try Swizzle.installChecked(testing.allocator, m_a, m_b);
-    defer swiz.restore();
-    try testing.expectError(error.IncompatibleSignatures, Swizzle.installChecked(testing.allocator, m_a, mismatched));
-}

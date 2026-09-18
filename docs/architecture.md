@@ -42,12 +42,13 @@ Rules:
   (no `subsystem.addImport("zobjc", ...)`).
 
 Status: the codebase is migrating toward this graph. New code must follow it;
-Target-vs-current status: `raw`, `internal`, `encoding`, and `abi`
-already match the target DAG. `messaging` joins them: it imports `abi`,
-`encoding`, `raw`, and `internal` only, with `runtime`/facade references
-removed from normalization and live tests moved to the facade.
-`wireModules()` keeps an explicit `legacy_facade_dependents` set (`block`,
-`memory`, `runtime`). Next: likely `runtime`.
+Target-vs-current status: `raw`, `internal`, `encoding`, `abi`,
+`messaging`, `runtime`, and `memory` already match the target DAG.
+`runtime` imports `block`, `encoding`, `memory`, `messaging`, and `raw`
+(all downward); `memory` imports `raw`, `runtime`, and `internal`, with only
+test-only edges removed so far. Live runtime/ownership tests moved to the
+facade. `wireModules()` keeps an explicit `legacy_facade_dependents` set
+with only `block` remaining. Next: `block`.
 
 ## API layers
 

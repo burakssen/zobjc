@@ -4,7 +4,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 const conversion = @import("conversion.zig");
 const memory = @import("memory");
@@ -68,39 +67,6 @@ pub const Property = struct {
         std.debug.assert(@alignOf(@This()) == @alignOf(raw.objc_property_t));
     }
 };
-
-test "property: dynamic class property introspection" {
-    const NSObject = objc.requireClass("NSObject");
-    const Subclass = objc.allocateClassPair(NSObject, "PropertyTestClass").?;
-    const attrs = [_]objc.PropertyAttribute{
-        .{ .name = "T", .value = "@\"NSString\"" },
-        .{ .name = "C", .value = "" },
-        .{ .name = "N", .value = "" },
-        .{ .name = "V", .value = "_title" },
-    };
-    try testing.expect(Subclass.addProperty("title", &attrs));
-    objc.registerClassPair(Subclass);
-    defer objc.disposeClassPair(Subclass);
-
-    const prop = Subclass.property("title").?;
-    try testing.expectEqualStrings("title", prop.name());
-    try testing.expect(prop.attributes() != null);
-    try testing.expect(prop.attributes().?.len > 0);
-
-    if (prop.copyAttributeValue("V")) |val| {
-        var owned = val;
-        defer owned.deinit();
-        try testing.expectEqualStrings("_title", owned.slice());
-    } else return error.AttributeValueNotFound;
-    try testing.expect(prop.eql(prop));
-}
-
-test "conversion: Property fromRaw and toRaw roundtrip" {
-    const NSObject = objc.requireClass("NSObject");
-    const prop = NSObject.property("className") orelse NSObject.property("description").?;
-    try testing.expect(prop.eql(Property.fromRaw(prop.toRaw()).?));
-    try testing.expectEqual(@as(?Property, null), Property.fromRaw(null));
-}
 
 test "handle: Property is pointer-sized and pointer-aligned" {
     try testing.expectEqual(@sizeOf(usize), @sizeOf(Property));

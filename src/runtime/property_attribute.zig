@@ -2,7 +2,6 @@
 
 const std = @import("std");
 const testing = std.testing;
-const objc = @import("zobjc");
 const raw = @import("raw");
 
 /// Describes an Objective-C property attribute (e.g. "T", "R", "C", "N", "V_ivar").
