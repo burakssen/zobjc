@@ -6,7 +6,7 @@
 const std = @import("std");
 const testing = std.testing;
 const raw = @import("raw");
-const PropertyAttribute = @import("runtime").PropertyAttribute;
+const PropertyAttribute = @import("internal").metadata.PropertyAttribute;
 const c_free = @import("c_free.zig");
 
 /// An owning wrapper for an array of `raw.objc_property_attribute_t` records.

@@ -2187,3 +2187,29 @@ fn getOrCreatePoolTestClass() objc.Class {
     objc.registerClassPair(cls);
     return cls;
 }
+
+test "integration: custom object wrappers retain and weak-reference" {
+    const Custom = struct {
+        ptr: *objc.raw.objc_object,
+        pub const objc_wrapper = true;
+    };
+    const cls = getOrCreateTestClass();
+    const initial_count = g_dealloc_count;
+    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
+    const custom = Custom{ .ptr = raw_obj.toRaw().? };
+
+    var retained = memory.Retained(Custom).adopt(custom);
+    try integration_std.testing.expectEqual(custom.ptr, retained.borrow().ptr);
+
+    var weak: memory.Weak(Custom) = .{};
+    weak.init(custom);
+    defer weak.deinit();
+    if (weak.loadRetained()) |*loaded| {
+        var mutable = loaded.*;
+        defer mutable.deinit();
+        try integration_std.testing.expectEqual(custom.ptr, mutable.borrow().ptr);
+    } else return error.ExpectedNonNullWeak;
+
+    retained.deinit();
+    try integration_std.testing.expectEqual(initial_count + 1, g_dealloc_count);
+}

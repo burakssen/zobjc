@@ -19,6 +19,11 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Broke `memory` -> `runtime`: shared `Selector`/`MethodDescription`/
+  `PropertyAttribute` now live in `internal` (re-exported by `runtime` with
+  unchanged identity), and ownership reconstruction is structural
+  (`fromRawNonNull` preference, `fromObject`/`fromObjC` conventions,
+  direct `.ptr` fallback) with unit fixtures for every path.
 - Decoupled `runtime` and `memory` from the facade: live runtime and
   ownership tests moved to facade integration coverage while pure
   conversion/layout tests stay in-module; both test targets link `libobjc`

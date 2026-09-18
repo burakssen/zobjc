@@ -42,18 +42,15 @@ Rules:
   (no `subsystem.addImport("zobjc", ...)`).
 
 Status: the codebase is migrating toward this graph. New code must follow it;
-Target-vs-current status: `raw`, `internal`, `encoding`, `abi`, and
-`messaging` match the target DAG. `runtime` and `memory` no longer import
-the facade directly, but they still form a temporary `runtime` ↔ `memory`
-cycle (`memory` uses runtime descriptor types in production signatures),
-while `runtime` ↔ `block` also remains cyclic (`runtime` owns
-`BlockMethodReplacement`; `block` uses runtime handles). The diagram above
-shows the target, not the current graph, for these three modules.
+Target-vs-current status: `raw`, `internal`, `encoding`, `abi`,
+`messaging`, and `memory` match the target DAG. Shared value types
+(`Selector`, `MethodDescription`, `PropertyAttribute`) live in `internal`,
+re-exported by `runtime` with unchanged identity; `memory` imports `raw`
+and `internal` only, with `runtime` -> `memory` the single remaining
+direction. `runtime` still imports `block` (for `BlockMethodReplacement`),
+and `block` still imports `runtime` and the facade: that cycle is next.
 `wireModules()` keeps an explicit `legacy_facade_dependents` set with only
-`block` remaining. Next, in order: break `memory` → `runtime` (keeping
-`runtime` → `memory` as the only direction), then relocate
-Block-specific replacement so `runtime` drops `block`, then decouple
-`block` → `zobjc`.
+`block` remaining.
 
 ## API layers
 

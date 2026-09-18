@@ -252,7 +252,6 @@ fn wireModules(modules: ModuleSet) void {
     modules.encoding.addImport("internal", modules.internal);
 
     modules.memory.addImport("raw", modules.raw);
-    modules.memory.addImport("runtime", modules.runtime);
     modules.memory.addImport("internal", modules.internal);
 
     modules.messaging.addImport("abi", modules.abi);
@@ -265,6 +264,7 @@ fn wireModules(modules: ModuleSet) void {
     modules.runtime.addImport("memory", modules.memory);
     modules.runtime.addImport("messaging", modules.messaging);
     modules.runtime.addImport("raw", modules.raw);
+    modules.runtime.addImport("internal", modules.internal);
 }
 
 fn addTestFixtures(module: *std.Build.Module, b: *std.Build) void {

@@ -6,7 +6,7 @@
 const std = @import("std");
 const testing = std.testing;
 const raw = @import("raw");
-const MethodDescription = @import("runtime").MethodDescription;
+const MethodDescription = @import("internal").metadata.MethodDescription;
 const c_free = @import("c_free.zig");
 
 /// An owning wrapper for an array of `raw.objc_method_description` records.

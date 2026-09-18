@@ -6,3 +6,5 @@ pub const platform = @import("platform.zig");
 pub const assertions = @import("assertions.zig");
 pub const cast = @import("cast.zig");
 pub const wrapper = @import("wrapper.zig");
+pub const selector = @import("selector.zig");
+pub const metadata = @import("metadata.zig");
