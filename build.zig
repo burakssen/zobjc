@@ -119,7 +119,8 @@ pub fn build(b: *std.Build) void {
         .{ .name = "runtime", .module = test_modules.runtime },
     };
     const test_step = b.step("test", "Run all zobjc tests");
-    addTestFixtures(test_modules.zobjc, b);
+    // NOTE: test-zobjc covers facade smoke tests only (no fixtures); the
+    // integration target below owns encoding.m/abi.m/common.m explicitly.
     const integration_test_artifact = b.addTest(.{
         .name = "test-integration",
         .root_module = integration_tests,
@@ -299,20 +300,4 @@ fn addIntegrationFixtures(module: *std.Build.Module, b: *std.Build) void {
         .file = b.path("fixtures/common.m"),
         .flags = &.{},
     });
-}
-
-fn addTestFixtures(module: *std.Build.Module, b: *std.Build) void {
-    module.linkSystemLibrary("objc", .{});
-    module.addCSourceFile(.{
-        .file = b.path("fixtures/encoding.m"),
-        .flags = &.{},
-    });
-    module.addCSourceFile(.{
-        .file = b.path("fixtures/abi.m"),
-        .flags = &.{},
-    });
-    // NOTE: fixtures/block.m is attached to the block test module only
-    // (see addBlockTestFixture); it reaches this binary transitively
-    // through the block test-module import. Attaching it here as well
-    // would link its symbols twice.
 }

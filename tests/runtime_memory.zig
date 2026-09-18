@@ -23,11 +23,11 @@ test "associated objects: assign policy" {
     const key = objc.AssociationKey.init();
     const host = objc.requireClass("NSObject").send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer host.send(void, "dealloc", .{});
+    defer host.send(void, "release", .{});
 
     const target = objc.requireClass("NSObject").send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer target.send(void, "dealloc", .{});
+    defer target.send(void, "release", .{});
 
     try std.testing.expect(host.associated(&key) == null);
     host.setAssociated(&key, target, .assign);
@@ -84,7 +84,7 @@ test "associated objects: copy policies" {
     const key_atomic = objc.AssociationKey.init();
     const host = objc.requireClass("NSObject").send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer host.send(void, "dealloc", .{});
+    defer host.send(void, "release", .{});
 
     const original = objc.requireClass("CopyableTracker").send(objc.Object, "alloc", .{})
         .send(objc.Object, "initWithIdentifier:", .{@as(c_int, 200)});
@@ -206,7 +206,7 @@ test "runtime: subclass creation, method replacement, and ivar addition" {
 
     const instance = dynamic_class.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer instance.send(void, "dealloc", .{});
+    defer instance.send(void, "release", .{});
 
     try std.testing.expectEqual(@as(u64, 42), instance.send(u64, "hash", .{}));
     try std.testing.expectEqual(@as(i32, 42), instance.send(i32, "multiplyByTwo:", .{@as(i32, 21)}));
@@ -262,7 +262,7 @@ test "mutation: dynamic class creation, methods, ivars, protocols, and propertie
 
     const inst = DynClass.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer inst.send(void, "dealloc", .{});
+    defer inst.send(void, "release", .{});
     try std.testing.expectEqual(@as(i32, 50), inst.send(i32, add_sel, .{ @as(i32, 2), @as(i32, 3) }));
 
     if (objc.getProtocol("NSObject")) |proto| {
@@ -498,7 +498,7 @@ test "method: exchange implementations" {
     const method2 = Subclass.instanceMethod(sel2).?;
     const inst = Subclass.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer inst.send(void, "dealloc", .{});
+    defer inst.send(void, "release", .{});
 
     try std.testing.expectEqual(@as(i32, 100), inst.send(i32, sel1, .{}));
     try std.testing.expectEqual(@as(i32, 200), inst.send(i32, sel2, .{}));
@@ -521,11 +521,11 @@ test "object: instance class and identity" {
     const cls = objc.requireClass("NSObject");
     const obj1 = cls.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer obj1.send(void, "dealloc", .{});
+    defer obj1.send(void, "release", .{});
 
     const obj2 = cls.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer obj2.send(void, "dealloc", .{});
+    defer obj2.send(void, "release", .{});
 
     try std.testing.expect(obj1.class().eql(cls));
     try std.testing.expectEqualStrings("NSObject", obj1.className());
@@ -542,7 +542,7 @@ test "object: setClass dynamic isa swizzling" {
 
     const obj = Base.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer obj.send(void, "dealloc", .{});
+    defer obj.send(void, "release", .{});
 
     try std.testing.expect(obj.class().eql(Base));
     const old_cls = obj.setClass(Subclass);
@@ -561,10 +561,10 @@ test "object: getIvar and setIvar" {
     const ivar = Subclass.instanceIvar("_child").?;
     const parent = Subclass.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer parent.send(void, "dealloc", .{});
+    defer parent.send(void, "release", .{});
     const child = Base.send(objc.Object, "alloc", .{})
         .send(objc.Object, "init", .{});
-    defer child.send(void, "dealloc", .{});
+    defer child.send(void, "release", .{});
 
     try std.testing.expectEqual(@as(?objc.Object, null), parent.getIvar(ivar));
     parent.setIvar(ivar, child);
@@ -576,7 +576,7 @@ test "object: getIvar and setIvar" {
 test "conversion: objc.Object fromRaw and toRaw roundtrip" {
     const cls = objc.requireClass("NSObject");
     const obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
-    defer obj.send(void, "dealloc", .{});
+    defer obj.send(void, "release", .{});
 
     const raw_id = obj.toRaw();
     try std.testing.expect(raw_id != null);
@@ -658,7 +658,7 @@ test "conversion: objc.Protocol fromRaw and toRaw roundtrip" {
 test "method replacement: replaceWith and conflict detection" {
     const env = try setupReplacementClass("ReplacementClass");
     defer {
-        env.inst.send(void, "dealloc", .{});
+        env.inst.send(void, "release", .{});
         objc.disposeClassPair(env.cls);
     }
 
@@ -697,7 +697,7 @@ test "method replacement: replaceWith and conflict detection" {
 test "method replacement: objc.BlockMethodReplacement" {
     const env = try setupReplacementClass("BlockReplacementClass");
     defer {
-        env.inst.send(void, "dealloc", .{});
+        env.inst.send(void, "release", .{});
         objc.disposeClassPair(env.cls);
     }
 
@@ -719,7 +719,7 @@ test "method replacement: objc.BlockMethodReplacement" {
 test "swizzle: basic swap and restore" {
     const env = try setupSwizzleClass("SwizzleBasicClass");
     defer {
-        env.inst.send(void, "dealloc", .{});
+        env.inst.send(void, "release", .{});
         objc.disposeClassPair(env.cls);
     }
 
@@ -736,7 +736,7 @@ test "swizzle: basic swap and restore" {
 test "swizzle: scoped RAII swizzling" {
     const env = try setupSwizzleClass("SwizzleScopedClass");
     defer {
-        env.inst.send(void, "dealloc", .{});
+        env.inst.send(void, "release", .{});
         objc.disposeClassPair(env.cls);
     }
 
@@ -755,7 +755,7 @@ test "swizzle: scoped RAII swizzling" {
 test "swizzle: installChecked signature validation" {
     const env = try setupSwizzleClass("SwizzleCheckedClass");
     defer {
-        env.inst.send(void, "dealloc", .{});
+        env.inst.send(void, "release", .{});
         objc.disposeClassPair(env.cls);
     }
 
