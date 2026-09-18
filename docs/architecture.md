@@ -51,8 +51,12 @@ re-exported by `runtime` with unchanged identity; `memory` imports `raw`
 and `internal` only, with `runtime` -> `memory` the single remaining
 direction. `runtime` still imports `block` (for `BlockMethodReplacement`),
 and `block` still imports `runtime` and the facade: that cycle is next.
-`wireModules()` keeps an explicit `legacy_facade_dependents` set with only
-`block` remaining.
+`runtime` no longer imports `block`: `BlockMethodReplacement` and the
+Block-bridged class enumeration live in `block`, with the top-level facade
+aliases repointed (`runtime.BlockMethodReplacement` moved to
+`block.BlockMethodReplacement`). `wireModules()` keeps an explicit
+`legacy_facade_dependents` set with only `block` remaining; the last cycle
+is `block` → `runtime` plus `block` → `zobjc`.
 
 ## API layers
 

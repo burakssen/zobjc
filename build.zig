@@ -259,7 +259,6 @@ fn wireModules(modules: ModuleSet) void {
     modules.messaging.addImport("raw", modules.raw);
     modules.messaging.addImport("internal", modules.internal);
 
-    modules.runtime.addImport("block", modules.block);
     modules.runtime.addImport("encoding", modules.encoding);
     modules.runtime.addImport("memory", modules.memory);
     modules.runtime.addImport("messaging", modules.messaging);

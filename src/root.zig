@@ -69,7 +69,7 @@ pub const AssociationPolicy = runtime.AssociationPolicy;
 pub const Swizzle = runtime.Swizzle;
 pub const ScopedSwizzle = runtime.ScopedSwizzle;
 pub const MethodReplacement = runtime.MethodReplacement;
-pub const BlockMethodReplacement = runtime.BlockMethodReplacement;
+pub const BlockMethodReplacement = block.BlockMethodReplacement;
 
 test {
     @import("std").testing.refAllDecls(@This());
@@ -1161,7 +1161,7 @@ test "class enumeration: protocol filter" {
         proto: Protocol,
     }{ .cnt = &count, .matched = &all_conform, .proto = NSCopying };
 
-    try runtime.enumerateClasses(.{ .conforming_to = NSCopying }, &ctx, struct {
+    try block.enumerateClasses(.{ .conforming_to = NSCopying }, &ctx, struct {
         fn cb(c: anytype, cls: Class) bool {
             c.cnt.* += 1;
             if (!cls.conformsTo(c.proto)) {
@@ -1188,7 +1188,7 @@ test "class enumeration: superclass filter" {
         super_cls: Class,
     }{ .cnt = &count, .matched = &all_subclasses, .super_cls = NSObject };
 
-    try runtime.enumerateClasses(.{ .subclassing = NSObject }, &ctx, struct {
+    try block.enumerateClasses(.{ .subclassing = NSObject }, &ctx, struct {
         fn cb(c: anytype, cls: Class) bool {
             c.cnt.* += 1;
             if (!cls.isSubclassOf(c.super_cls)) {
@@ -1212,7 +1212,7 @@ test "class enumeration: dynamic class filter" {
     defer objc.disposeClassPair(dyn_cls);
 
     var found_dyn = false;
-    try runtime.enumerateClasses(.{ .image = .dynamic }, &found_dyn, struct {
+    try block.enumerateClasses(.{ .image = .dynamic }, &found_dyn, struct {
         fn cb(found: *bool, cls: Class) bool {
             if (integration_std.mem.eql(u8, cls.name(), "EnumTestDynamicClass")) {
                 found.* = true;
@@ -2212,4 +2212,44 @@ test "integration: custom object wrappers retain and weak-reference" {
 
     retained.deinit();
     try integration_std.testing.expectEqual(initial_count + 1, g_dealloc_count);
+}
+
+test "class enumeration: early stop" {
+    if (!runtime.hasClassEnumeration()) return;
+
+    var count: usize = 0;
+    try block.enumerateClasses(.{}, &count, struct {
+        fn cb(c_ptr: *usize, cls: Class) bool {
+            _ = cls;
+            c_ptr.* += 1;
+            return c_ptr.* < 2;
+        }
+    }.cb);
+    try integration_std.testing.expectEqual(@as(usize, 2), count);
+}
+
+test "class enumeration: prefix filter" {
+    if (!runtime.hasClassEnumeration()) return;
+
+    var count: usize = 0;
+    var all_start_with_dealloc = true;
+    var ctx = struct {
+        cnt: *usize,
+        matched: *bool,
+    }{ .cnt = &count, .matched = &all_start_with_dealloc };
+
+    try block.enumerateClasses(.{ .name_prefix = "Dealloc" }, &ctx, struct {
+        fn cb(c: anytype, cls: Class) bool {
+            c.cnt.* += 1;
+            const cls_name = cls.name();
+            if (!integration_std.mem.startsWith(u8, cls_name, "Dealloc")) {
+                c.matched.* = false;
+                return false;
+            }
+            return true;
+        }
+    }.cb);
+
+    try integration_std.testing.expect(count > 0);
+    try integration_std.testing.expect(all_start_with_dealloc);
 }

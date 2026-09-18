@@ -24,6 +24,8 @@ pub const owned = @import("owned.zig");
 pub const create = @import("create.zig");
 pub const invoke = @import("invoke.zig");
 pub const imp = @import("imp.zig");
+pub const enumeration = @import("enumeration.zig");
+pub const replacement = @import("replacement.zig");
 pub const diagnostics = @import("diagnostics.zig");
 pub const validation = @import("validation.zig");
 pub const internal = @import("internal/literal.zig");
@@ -60,6 +62,10 @@ pub const callBlock = invoke.callBlock;
 
 // --- Block ↔ IMP Bridging ---
 pub const OwnedImp = imp.OwnedImp;
+pub const BlockMethodReplacement = replacement.BlockMethodReplacement;
+pub const enumerateClasses = enumeration.enumerateClasses;
+pub const ClassEnumerationOptions = enumeration.ClassEnumerationOptions;
+pub const ImageFilter = enumeration.ImageFilter;
 pub const makeImp = imp.makeImp;
 pub const MethodBlock = imp.MethodBlock;
 

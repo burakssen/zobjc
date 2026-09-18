@@ -71,16 +71,13 @@ pub const clearAssociated = association.clearAssociated;
 pub const associatedRetained = association.associatedRetained;
 
 // Enumeration
-pub const ImageFilter = enumeration.ImageFilter;
-pub const ClassEnumerationOptions = enumeration.ClassEnumerationOptions;
-pub const enumerateClasses = enumeration.enumerateClasses;
 pub const hasClassEnumeration = enumeration.hasClassEnumeration;
+pub const getEnumerateClassesFn = enumeration.getEnumerateClassesFn;
 
 // Swizzling & Replacement
 pub const Swizzle = swizzle.Swizzle;
 pub const ScopedSwizzle = swizzle.ScopedSwizzle;
 pub const MethodReplacement = replacement.MethodReplacement;
-pub const BlockMethodReplacement = replacement.BlockMethodReplacement;
 
 test {
     @import("std").testing.refAllDecls(@This());

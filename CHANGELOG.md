@@ -19,6 +19,9 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Broke `runtime` -> `block`: `BlockMethodReplacement` and Block-bridged
+  class enumeration moved into `block` (facade aliases repointed;
+  `runtime.BlockMethodReplacement` now lives at `block.BlockMethodReplacement`).
 - Broke `memory` -> `runtime`: shared `Selector`/`MethodDescription`/
   `PropertyAttribute` now live in `internal` (re-exported by `runtime` with
   unchanged identity), and ownership reconstruction is structural
