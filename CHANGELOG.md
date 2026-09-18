@@ -19,6 +19,9 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Made `raw.boolResult()` follow C truthiness (`!= 0`) instead of `== 1`,
+  so non-canonical signed-char `BOOL` values convert correctly; pinned with
+  char-`BOOL`-target regression assertions.
 - Fixed an x86_64-only test compile error: `class_addMethod` returns raw
   `BOOL` (`i8` on Intel), so the Block test now asserts via
   `raw.boolResult()`; also releases instead of directly deallocating the test

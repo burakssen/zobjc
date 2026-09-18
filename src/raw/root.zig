@@ -42,10 +42,12 @@ pub const objc_property_attribute_t = types.objc_property_attribute_t;
 
 // --- Boolean Helpers ---
 
-/// Converts a target-specific Objective-C BOOL into a Zig bool.
+/// Converts a target-specific Objective-C BOOL into a Zig bool, following C
+/// truthiness: any nonzero value is true (a signed-char BOOL is not limited
+/// to canonical YES/NO).
 pub inline fn boolResult(result: BOOL) bool {
     if (BOOL == bool) return result;
-    return result == 1;
+    return result != 0;
 }
 
 /// Converts a Zig bool into a target-specific Objective-C BOOL.
