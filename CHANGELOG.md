@@ -23,8 +23,9 @@ All notable changes to zobjc are documented here. Format follows
   `classifyReturn` handle/raw equivalence assertions at the facade.
 - Decoupled `abi` into a pure compile-time leaf with no `runtime`,
   `encoding`, `internal`, facade, or `raw` imports: handles classify by
-  machine representation (raw handles and single-pointer wrappers as
-  pointers; aggregates by layout), `assertValidReturn` removed in favor of
+  machine representation: raw handles as pointers, single-pointer
+  wrapper structs as aggregates of one pointer, and optional single-pointer
+  wrappers via pointer classification; `assertValidReturn` removed in favor of
   the single `categorize` accept/reject switch, and handle coverage moved to
   facade equivalence tests (`returnConvention(T) == returnConvention(raw)`).
 - Made `objc_wrapper = false` an explicit wrapper-trait opt-out (taking
@@ -35,7 +36,7 @@ All notable changes to zobjc are documented here. Format follows
   method validation derive handle behavior from wrapper kinds (with a
   canonical `@:` and a new pure-trait `Imp → ^?` path), live differential
   tests moved to the facade, and `wireModules()` now lists remaining upward
-  edges explicitly (`abi`, `block`, `memory`, `messaging`, `runtime`).
+  edges explicitly (`block`, `memory`, `messaging`, `runtime`).
 - Made `raw.boolResult()` follow C truthiness (`!= 0`) instead of `== 1`,
   so non-canonical signed-char `BOOL` values convert correctly; pinned with
   char-`BOOL`-target regression assertions.

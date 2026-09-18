@@ -12,7 +12,7 @@ pub const TypeCategory = enum {
     pointer,
     floating,
     long_double,
-    // ponytail: kept for API stability; currently unreachable because Zig cannot
+    // Kept for API stability; currently unreachable because Zig cannot
     // spell C `_Complex long double`. Ordinary 2x-long-double structs fall
     // through to `.aggregate` below (stret on x86_64 when >16 bytes).
     complex_long_double,
