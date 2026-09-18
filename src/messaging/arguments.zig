@@ -6,6 +6,7 @@ const std = @import("std");
 const testing = std.testing;
 const raw = @import("raw");
 const runtime = @import("runtime");
+const wrapper = @import("internal").wrapper;
 const Object = runtime.Object;
 const Class = runtime.Class;
 const Selector = runtime.Selector;
@@ -35,12 +36,14 @@ pub fn AbiArgumentType(comptime T: type) type {
     if (T == Selector or T == ?Selector) return raw.SEL;
     if (T == Imp or T == ?Imp) return raw.IMP;
 
-    if (@typeInfo(T) == .@"struct" and @hasField(T, "ptr")) {
-        const FieldType = @TypeOf(@as(T, undefined).ptr);
-        if (FieldType == *raw.objc_object) return raw.id;
-        if (FieldType == *raw.objc_class) return raw.Class;
-        if (FieldType == *raw.objc_selector) return raw.SEL;
-        if (FieldType == raw.IMP or FieldType == ?raw.IMP) return raw.IMP;
+    if (@typeInfo(T) == .@"struct" and wrapper.isObjCWrapper(T)) {
+        return switch (wrapper.wrapperKind(T)) {
+            .object => raw.id,
+            .class => raw.Class,
+            .selector => raw.SEL,
+            .imp => raw.IMP,
+            .none => unreachable,
+        };
     }
 
     // 2. Raw ABI handles
@@ -92,12 +95,12 @@ pub inline fn toAbi(val: anytype) AbiArgumentType(@TypeOf(val)) {
     } else if (comptime T == ?Selector) {
         if (val) |s| return s.ptr;
         return null;
-    } else if (comptime T == Imp) {
+    } else     if (comptime T == Imp) {
         return val.ptr;
     } else if (comptime T == ?Imp) {
         if (val) |i| return i.ptr;
         return null;
-    } else if (comptime @typeInfo(T) == .@"struct" and @hasField(T, "ptr")) {
+    } else if (comptime wrapper.isObjCWrapper(T)) {
         return val.ptr;
     } else if (comptime isSentinelString(T)) {
         return @as([*:0]const u8, @ptrCast(val));

@@ -225,6 +225,8 @@ fn wireModules(modules: ModuleSet) void {
     modules.abi.addImport("runtime", modules.runtime);
     modules.abi.addImport("internal", modules.internal);
 
+    modules.internal.addImport("raw", modules.raw);
+
     modules.block.addImport("abi", modules.abi);
     modules.block.addImport("encoding", modules.encoding);
     modules.block.addImport("memory", modules.memory);
@@ -234,14 +236,17 @@ fn wireModules(modules: ModuleSet) void {
 
     modules.encoding.addImport("raw", modules.raw);
     modules.encoding.addImport("runtime", modules.runtime);
+    modules.encoding.addImport("internal", modules.internal);
 
     modules.memory.addImport("raw", modules.raw);
     modules.memory.addImport("runtime", modules.runtime);
+    modules.memory.addImport("internal", modules.internal);
 
     modules.messaging.addImport("abi", modules.abi);
     modules.messaging.addImport("encoding", modules.encoding);
     modules.messaging.addImport("raw", modules.raw);
     modules.messaging.addImport("runtime", modules.runtime);
+    modules.messaging.addImport("internal", modules.internal);
 
     modules.runtime.addImport("block", modules.block);
     modules.runtime.addImport("encoding", modules.encoding);

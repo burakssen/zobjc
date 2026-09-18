@@ -62,7 +62,8 @@ pub fn main() void {
 - `src/abi/`: target-specific calling-convention classification
 - `examples/`: runnable usage examples
 
-See `docs/` for architecture, API, ABI, ownership, and verification details.
+See `docs/architecture.md` for architecture, API, and ABI notes,
+`docs/ownership.md` for ownership, and `docs/verification.md` for verification details.
 
 ## License
 

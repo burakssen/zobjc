@@ -7,6 +7,7 @@ const std = @import("std");
 const testing = std.testing;
 const raw = @import("raw");
 const runtime = @import("runtime");
+const wrapper = @import("internal").wrapper;
 const Object = runtime.Object;
 const Class = runtime.Class;
 const Selector = runtime.Selector;
@@ -24,20 +25,23 @@ pub fn AbiReturnType(comptime T: type) type {
     if (T == Selector or T == ?Selector) return raw.SEL;
     if (T == Imp or T == ?Imp) return raw.IMP;
 
-    if (@typeInfo(T) == .@"struct" and @hasField(T, "ptr")) {
-        const FieldType = @TypeOf(@as(T, undefined).ptr);
-        if (FieldType == *raw.objc_object) return raw.id;
-        if (FieldType == *raw.objc_class) return raw.Class;
-        if (FieldType == *raw.objc_selector) return raw.SEL;
-        if (FieldType == raw.IMP or FieldType == ?raw.IMP) return raw.IMP;
+    if (@typeInfo(T) == .@"struct" and wrapper.isObjCWrapper(T)) {
+        return switch (wrapper.wrapperKind(T)) {
+            .object => raw.id,
+            .class => raw.Class,
+            .selector => raw.SEL,
+            .imp => raw.IMP,
+            .none => unreachable,
+        };
     }
-    if (@typeInfo(T) == .optional and @typeInfo(@typeInfo(T).optional.child) == .@"struct" and @hasField(@typeInfo(T).optional.child, "ptr")) {
-        const Child = @typeInfo(T).optional.child;
-        const FieldType = @TypeOf(@as(Child, undefined).ptr);
-        if (FieldType == *raw.objc_object) return raw.id;
-        if (FieldType == *raw.objc_class) return raw.Class;
-        if (FieldType == *raw.objc_selector) return raw.SEL;
-        if (FieldType == raw.IMP or FieldType == ?raw.IMP) return raw.IMP;
+    if (@typeInfo(T) == .optional and wrapper.isObjCWrapper(T)) {
+        return switch (wrapper.wrapperKind(T)) {
+            .object => raw.id,
+            .class => raw.Class,
+            .selector => raw.SEL,
+            .imp => raw.IMP,
+            .none => unreachable,
+        };
     }
 
     // 2. Raw handles
@@ -72,13 +76,13 @@ pub inline fn fromAbi(comptime Return: type, raw_val: AbiReturnType(Return)) Ret
         return Imp.fromRaw(raw_val);
     } else if (comptime Return == Imp) {
         return Imp.fromRaw(raw_val) orelse @panic("Objective-C message returned nil for non-null Imp return type");
-    } else if (comptime @typeInfo(Return) == .optional and @typeInfo(@typeInfo(Return).optional.child) == .@"struct" and @hasField(@typeInfo(Return).optional.child, "ptr")) {
+    } else if (comptime @typeInfo(Return) == .optional and wrapper.isObjCWrapper(Return)) {
         const Child = @typeInfo(Return).optional.child;
         if (raw_val) |p| {
             return Child{ .ptr = @ptrCast(p) };
         }
         return null;
-    } else if (comptime @typeInfo(Return) == .@"struct" and @hasField(Return, "ptr")) {
+    } else if (comptime @typeInfo(Return) == .@"struct" and wrapper.isObjCWrapper(Return)) {
         const p = raw_val orelse @panic("Objective-C message returned nil for non-null return type");
         return Return{ .ptr = @ptrCast(p) };
     } else if (comptime @typeInfo(Return) == .@"enum") {

@@ -6,6 +6,7 @@
 const std = @import("std");
 const raw = @import("raw");
 const runtime = @import("runtime");
+const wrapper = @import("internal").wrapper;
 const Selector = runtime.Selector;
 
 // Use the Objective-C runtime's interned selector machinery directly with zero extra caching.
@@ -13,10 +14,7 @@ const Selector = runtime.Selector;
 /// Returns true if `T` is an acceptable selector representation.
 pub fn isValidSelector(comptime T: type) bool {
     if (T == Selector or T == raw.SEL or T == *raw.objc_selector) return true;
-    if (@typeInfo(T) == .@"struct" and @hasField(T, "ptr")) {
-        const FieldType = @TypeOf(@as(T, undefined).ptr);
-        if (FieldType == *raw.objc_selector) return true;
-    }
+    if (wrapper.isObjCWrapper(T) and wrapper.wrapperKind(T) == .selector) return true;
     switch (@typeInfo(T)) {
         .pointer => |ptr| {
             if (ptr.child == u8 and ptr.sentinel_ptr != null) return true;
@@ -75,7 +73,7 @@ pub inline fn toRaw(sel: anytype) raw.SEL {
         return sel.ptr;
     } else if (comptime (T == raw.SEL or T == *raw.objc_selector)) {
         return sel;
-    } else if (comptime @typeInfo(T) == .@"struct" and @hasField(T, "ptr")) {
+    } else if (comptime wrapper.isObjCWrapper(T)) {
         return sel.ptr;
     } else {
         // String literal or sentinel-terminated slice: register with libobjc

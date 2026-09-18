@@ -7,6 +7,7 @@
 
 const std = @import("std");
 const raw = @import("raw");
+const wrapper = @import("internal").wrapper;
 const Object = @import("runtime").Object;
 const Class = @import("runtime").Class;
 const Selector = @import("runtime").Selector;
@@ -25,6 +26,9 @@ pub fn isObjCEncodable(comptime T: type) bool {
 
     // 2. High-level runtime handles
     if (T == Object or T == ?Object or T == Class or T == ?Class or T == Selector or T == ?Selector) return true;
+
+    // 2b. Explicit wrapper types (framework handles) encode as their wrapped handle.
+    if (wrapper.isObjCWrapper(T)) return true;
 
     // 3. Raw handles
     if (T == raw.id or T == raw.Class or T == raw.SEL) return true;
@@ -159,6 +163,15 @@ pub fn StorageType(comptime T: type) type {
     if (T == Selector or T == ?Selector) return raw.SEL;
     if (T == Imp or T == ?Imp) return raw.IMP;
     if (T == Protocol or T == ?Protocol) return raw.Protocol;
+    if (wrapper.isObjCWrapper(T)) {
+        return switch (wrapper.wrapperKind(T)) {
+            .object => raw.id,
+            .class => raw.Class,
+            .selector => raw.SEL,
+            .imp => raw.IMP,
+            .none => unreachable,
+        };
+    }
 
     return switch (@typeInfo(T)) {
         .@"enum" => |e| e.tag_type,

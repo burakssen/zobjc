@@ -16,6 +16,11 @@ const sel_fn = @import("runtime").sel;
 const testing = std.testing;
 
 /// Owning handle for an Apple Block.
+///
+/// Move-only by convention (Zig cannot enforce this): NEVER copy an
+/// `OwnedBlock` by value — duplicate with `clone()` instead. All consuming
+/// methods take pointer receivers (`deinit`, `intoRaw`) or invalidate-safe
+/// borrows so accidental copies are minimized.
 pub fn OwnedBlock(comptime Signature: type) type {
     return struct {
         ptr: ?*raw.blocks.Block_layout = null,

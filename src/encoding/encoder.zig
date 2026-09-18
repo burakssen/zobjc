@@ -6,6 +6,7 @@
 
 const std = @import("std");
 const raw = @import("raw");
+const wrapper = @import("internal").wrapper;
 const types = @import("type.zig");
 const QualifiedType = types.QualifiedType;
 const Type = types.Type;
@@ -38,6 +39,12 @@ pub fn encodedLength(comptime T: type) usize {
         if (T == Object or T == ?Object or T == raw.id) return 1; // '@'
         if (T == Class or T == ?Class or T == raw.Class) return 1; // '#'
         if (T == Selector or T == ?Selector or T == raw.SEL) return 1; // ':'
+
+        // 2b. Explicit wrapper types encode as their wrapped handle.
+        if (wrapper.isObjCWrapper(T)) {
+            if (wrapper.wrapperKind(T) == .imp) return 2; // "^?"
+            return 1;
+        }
 
         // 3. C strings
         if (T == [*c]const u8 or T == [*:0]const u8 or T == ?[*:0]const u8) {
@@ -185,6 +192,31 @@ fn writeComptimeType(comptime T: type, buf: []u8, idx: *usize, comptime ptr_dept
         if (T == Selector or T == ?Selector or T == raw.SEL) {
             buf[idx.*] = ':';
             idx.* += 1;
+            return;
+        }
+
+        // Explicit wrapper types encode as their wrapped handle.
+        if (wrapper.isObjCWrapper(T)) {
+            switch (wrapper.wrapperKind(T)) {
+                .object => {
+                    buf[idx.*] = '@';
+                    idx.* += 1;
+                },
+                .class => {
+                    buf[idx.*] = '#';
+                    idx.* += 1;
+                },
+                .selector => {
+                    buf[idx.*] = ':';
+                    idx.* += 1;
+                },
+                .imp => {
+                    buf[idx.*] = '^';
+                    buf[idx.* + 1] = '?';
+                    idx.* += 2;
+                },
+                .none => unreachable,
+            }
             return;
         }
 

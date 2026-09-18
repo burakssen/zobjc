@@ -60,10 +60,29 @@ pub const IMP = ?*const fn () callconv(.c) void;
 
 /// Target-specific boolean representation.
 ///
-/// Apple's <objc/objc.h> defines BOOL conditionally:
-/// - macOS and Mac Catalyst: signed char (`i8`) for historical ABI compatibility.
-/// - 32-bit legacy iOS: signed char (`i8`).
-/// - 64-bit iOS, tvOS, watchOS, visionOS: C99 bool (`bool`).
+/// Mirrors Apple's <objc/objc.h> selection, which honors the compiler's
+/// predefined `__OBJC_BOOL_IS_BOOL` macro first and only falls back to
+/// OS-based guessing for compilers that don't define it:
+///
+/// ```c
+/// #if defined(__OBJC_BOOL_IS_BOOL)
+///     // Honor __OBJC_BOOL_IS_BOOL when available.
+/// #elif TARGET_OS_OSX || TARGET_OS_MACCATALYST || <32-bit iOS>
+///     // signed char
+/// #else
+///     // bool
+/// #endif
+/// ```
+///
+/// Verified against Apple Clang 21 and zig cc 0.16.0: `__OBJC_BOOL_IS_BOOL`
+/// is 1 for macOS arm64 and all 64-bit iOS-family targets (including the
+/// x86_64 simulator), and 0 for macOS x86_64. That is exactly what the
+/// architecture-first switch below encodes. Note the header's `TARGET_OS_OSX`
+/// fallback text alone is misleading: with any current Clang the predefined
+/// macro wins, so macOS arm64 `BOOL` is C99 `bool` (`@encode` → `"B"`).
+/// The Clang differential test `checkDifferential(raw.BOOL,
+/// fixture_encode_bool)` pins this per toolchain; it fails if the model and
+/// the C compiler disagree.
 pub const objc_bool_is_bool = switch (builtin.cpu.arch) {
     .aarch64 => true,
     else => switch (builtin.os.tag) {
@@ -136,6 +155,18 @@ test "opaque handle sizes and alignments" {
 test "BOOL representation and boolean conversion helpers" {
     try testing.expectEqual(1, @sizeOf(raw.BOOL));
     try testing.expectEqual(1, @alignOf(raw.BOOL));
+
+    // Toolchain-verified model: with current Clang, macOS arm64 BOOL is
+    // C99 bool (compiler predefines __OBJC_BOOL_IS_BOOL=1); macOS x86_64
+    // stays signed char. The Clang differential fixture is authoritative.
+    if (builtin.os.tag == .macos and builtin.cpu.arch == .aarch64) {
+        try testing.expect(raw.objc_bool_is_bool);
+        try testing.expect(raw.BOOL == bool);
+    }
+    if (builtin.os.tag == .macos and builtin.cpu.arch == .x86_64) {
+        try testing.expect(!raw.objc_bool_is_bool);
+        try testing.expect(raw.BOOL == i8);
+    }
 
     try testing.expect(raw.boolResult(raw.YES));
     try testing.expect(!raw.boolResult(raw.NO));

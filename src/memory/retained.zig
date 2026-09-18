@@ -12,8 +12,17 @@ const traits = @import("traits.zig");
 /// A type-safe smart pointer that owns exactly one strong reference (+1) to an
 /// Objective-C object of type `T`.
 ///
-/// `Retained(T)` is an owning value and MUST NOT be copied by value. Use `.clone()`
-/// to create a second independent owner.
+/// Move-only by convention (Zig cannot enforce this): NEVER copy a `Retained`
+/// by value. `var b = a;` creates two Zig values for one +1 obligation and a
+/// subsequent double `deinit()` double-releases. Pass owners by pointer
+/// (`*Retained(T)`), transfer by returning by value, duplicate with `clone()`.
+///
+/// ```zig
+/// var a = Retained(Object).adopt(obj);
+/// defer a.deinit();
+/// var b = a.clone(); // second independent +1 — the only legal "copy"
+/// defer b.deinit();
+/// ```
 pub fn Retained(comptime T: type) type {
     comptime {
         if (!traits.isRetainable(T)) {
@@ -183,6 +192,23 @@ test "Retained: createInstanceRetained on Class" {
     const initial_count = g_dealloc_count;
     var retained = cls.createInstanceRetained(0).?;
     _ = retained.borrow().send(objc.Object, "init", .{});
+    retained.deinit();
+    try testing.expectEqual(initial_count + 1, g_dealloc_count);
+}
+
+fn consumeThroughPointer(owner: *Retained(objc.Object)) void {
+    // Recommended pattern: owners travel by pointer, never by value.
+    owner.deinit();
+}
+
+test "Retained: pointer-passing invalidates owner without copying" {
+    const cls = getOrCreateTestClass();
+    const initial_count = g_dealloc_count;
+    const raw_obj = cls.send(objc.Object, "alloc", .{}).send(objc.Object, "init", .{});
+    var retained = Retained(objc.Object).adopt(raw_obj);
+    consumeThroughPointer(&retained);
+    try testing.expectEqual(initial_count + 1, g_dealloc_count);
+    // Second deinit on the same (now empty) value is a safe no-op.
     retained.deinit();
     try testing.expectEqual(initial_count + 1, g_dealloc_count);
 }

@@ -6,6 +6,7 @@
 const std = @import("std");
 const raw = @import("raw");
 const runtime = @import("runtime");
+const wrapper = @import("internal").wrapper;
 const Object = runtime.Object;
 const Class = runtime.Class;
 
@@ -20,9 +21,12 @@ pub fn isValidReceiver(comptime T: type) bool {
     if (@typeInfo(T) == .optional) {
         return isValidReceiver(@typeInfo(T).optional.child);
     }
-    if (@typeInfo(T) == .@"struct" and @hasField(T, "ptr")) {
-        const FieldType = @TypeOf(@as(T, undefined).ptr);
-        if (FieldType == *raw.objc_object or FieldType == *raw.objc_class) return true;
+    // Explicit wrapper trait only: a bare struct with a `ptr` field is NOT a receiver.
+    if (wrapper.isObjCWrapper(T)) {
+        return switch (wrapper.wrapperKind(T)) {
+            .object, .class => true,
+            else => false,
+        };
     }
     return false;
 }
@@ -62,9 +66,27 @@ pub inline fn toRaw(receiver: anytype) raw.id {
     } else if (comptime @typeInfo(T) == .optional) {
         if (receiver) |val| return toRaw(val);
         return null;
-    } else if (comptime @typeInfo(T) == .@"struct" and @hasField(T, "ptr")) {
+    } else if (comptime wrapper.isObjCWrapper(T)) {
         return @ptrCast(receiver.ptr);
     } else {
         unreachable;
     }
+}
+
+const testing = std.testing;
+
+const ExplicitNSString = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = true;
+};
+
+const AccidentalPtr = struct {
+    ptr: *raw.objc_object,
+};
+
+test "receiver: explicit wrappers accepted, bare ptr structs rejected" {
+    try testing.expect(isValidReceiver(ExplicitNSString));
+    try testing.expect(isValidReceiver(?ExplicitNSString));
+    try testing.expect(!isValidReceiver(AccidentalPtr));
+    try testing.expect(!isValidReceiver(?AccidentalPtr));
 }

@@ -3,6 +3,7 @@
 const std = @import("std");
 const raw = @import("raw");
 const runtime = @import("runtime");
+const wrapper = @import("internal").wrapper;
 const receiver_mod = @import("receiver.zig");
 const selector_mod = @import("selector.zig");
 const arguments_mod = @import("arguments.zig");
@@ -51,6 +52,9 @@ pub fn assertValidArgument(comptime T: type, comptime index: usize) void {
 
     // Raw handles
     if (T == raw.id or T == raw.Class or T == raw.SEL or T == raw.IMP) return;
+
+    // Explicit Objective-C wrapper types (objc_wrapper / asObject+fromObject / toObjC+fromObjC).
+    if (wrapper.isObjCWrapper(T)) return;
 
     // Sentinel strings
     if (arguments_mod.isSentinelString(T)) return;
@@ -135,6 +139,9 @@ pub fn assertValidReturn(comptime Return: type) void {
 
     // Raw handles
     if (Return == raw.id or Return == raw.Class or Return == raw.SEL or Return == raw.IMP) return;
+
+    // Explicit wrapper returns (e.g. framework handle structs).
+    if (wrapper.isObjCWrapper(Return)) return;
 
     // Normalized ABI type check
     const AbiReturn = returns_mod.AbiReturnType(Return);
