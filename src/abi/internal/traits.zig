@@ -54,11 +54,12 @@ pub fn isLongDouble(comptime T: type) bool {
     return T == c_longdouble or T == f80;
 }
 
-/// Returns true if T represents a complex long double (e.g. extern struct of two long doubles).
+/// Returns true if T represents a C `_Complex long double`.
+/// ponytail: Zig has no complex type in @typeInfo, so there is no Zig spelling
+/// of C `_Complex long double`. An `extern struct` of two long doubles is an
+/// ordinary aggregate (SysV: MEMORY/stret when >16 bytes), NOT COMPLEX_X87,
+/// so this deliberately returns false — `fp2ret` is never auto-selected.
 pub fn isComplexLongDouble(comptime T: type) bool {
-    if (@typeInfo(T) != .@"struct") return false;
-    const info = @typeInfo(T).@"struct";
-    if (info.layout != .@"extern") return false;
-    if (info.fields.len != 2) return false;
-    return isLongDouble(info.fields[0].type) and isLongDouble(info.fields[1].type);
+    _ = T;
+    return false;
 }

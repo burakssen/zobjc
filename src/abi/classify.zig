@@ -101,7 +101,15 @@ test "differential: scalars match Apple Clang" {
     try checkDifferential(f32, .normal, .normal);
     try checkDifferential(f64, .normal, .normal);
     try checkDifferential(c_longdouble, .normal, .fpret);
-    try checkDifferential(ComplexLongDouble, .normal, .fp2ret);
+}
+
+test "regression: ordinary 2x-long-double struct is not COMPLEX_X87" {
+    // ponytail: C `_Complex long double` alone selects fp2ret per SysV/Clang;
+    // an ordinary struct of two long doubles is an aggregate (MEMORY/stret
+    // when >16 bytes). Zig cannot spell `_Complex`, so never auto-select fp2ret.
+    try testing.expect(returnConventionFor(Target.macos_arm64, ComplexLongDouble) != .fp2ret);
+    try testing.expect(returnConventionFor(Target.macos_x86_64, ComplexLongDouble) != .fp2ret);
+    try testing.expect(classifyReturn(Target.macos_x86_64, ComplexLongDouble) != .complex_x87);
 }
 
 test "differential: small structures (<= 16 bytes) match Apple Clang" {

@@ -126,9 +126,14 @@ test "x86_64 scalar: long double uses fpret" {
     try testing.expectEqual(.x87, classifyReturn(target, c_longdouble));
 }
 
-test "x86_64 scalar: complex long double uses fp2ret" {
-    const ComplexLongDouble = extern struct { real: c_longdouble, imag: c_longdouble };
+test "x86_64: ordinary 2x-long-double struct never uses fp2ret" {
+    // ponytail: no ObjC fixture needed — the classifier is pure comptime, and
+    // host @sizeOf(c_longdouble) differs per arch (8 on arm64, 16 on x86_64),
+    // so assert the host-independent invariant: never fp2ret/complex_x87.
+    // A true C `_Complex long double` has no Zig spelling; ordinary aggregates
+    // go through the aggregate path (stret natively on x86_64 where size is 32).
+    const Pair = extern struct { first: c_longdouble, second: c_longdouble };
     const target = Target.macos_x86_64;
-    try testing.expectEqual(.fp2ret, returnConvention(target, ComplexLongDouble));
-    try testing.expectEqual(.complex_x87, classifyReturn(target, ComplexLongDouble));
+    try testing.expect(returnConvention(target, Pair) != .fp2ret);
+    try testing.expect(classifyReturn(target, Pair) != .complex_x87);
 }

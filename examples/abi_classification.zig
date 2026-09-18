@@ -80,6 +80,8 @@ pub fn main() !void {
     std.debug.print("  1. ARM64 never uses stret or fpret (messengers do not exist in ARM64 libobjc).\n", .{});
     std.debug.print("  2. x86_64 f32 and f64 use normal objc_msgSend, NOT fpret.\n", .{});
     std.debug.print("  3. x86_64 long double uses objc_msgSend_fpret (returns in ST0).\n", .{});
-    std.debug.print("  4. x86_64 complex long double uses objc_msgSend_fp2ret (ST0/ST1).\n", .{});
+    // ponytail: Zig cannot spell C `_Complex long double`, so fp2ret is never
+    // auto-selected; an ordinary 2x-long-double struct uses the aggregate path.
+    std.debug.print("  4. _Complex long double unsupported: 2x-long-double structs use stret/normal, never fp2ret.\n", .{});
     std.debug.print("  5. x86_64 CGRect (>16B) uses objc_msgSend_stret; ARM64 uses objc_msgSend.\n", .{});
 }

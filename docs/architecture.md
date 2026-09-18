@@ -44,7 +44,9 @@ incrementally (raw layer first).
 - `src/encoding/`: `@encode` strings, parsing (`encoding.parseMethod`), and
   comptime generation (`comptimeEncode`, `methodEncoding`).
 - `src/abi/`: return-convention classification (`objc_msgSend` vs `stret` /
-  `fpret` / `fp2ret`) per Apple target.
+  `fpret`) per Apple target. `fp2ret` exists in `raw` for ABI completeness but
+  is never auto-selected: Zig cannot spell C `_Complex long double`, and an
+  ordinary 2x-long-double struct is an aggregate (stret when >16 bytes).
 - `src/messaging/`: typed dispatch (`send`, `sendSuper`, `invoke`, `callImp`,
   `sendChecked`). `send` is zero-overhead; `sendChecked` additionally validates
   the runtime method signature in safety builds.
