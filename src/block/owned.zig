@@ -115,7 +115,7 @@ test "imp: makeImp and method dispatch" {
     defer raw.runtime.objc_disposeClassPair(dynamic_cls);
 
     const added = raw.runtime.class_addMethod(dynamic_cls, sel_fn("add:and:").toRaw(), owned_imp.borrow().toRaw(), "i@:ii");
-    try testing.expect(added);
+    try testing.expect(raw.boolResult(added));
     raw.runtime.objc_registerClassPair(dynamic_cls);
 
     const cls_handle = Class.fromRaw(dynamic_cls).?;
@@ -145,6 +145,6 @@ test "differential: Block to IMP bridge lifecycle" {
     raw.runtime.objc_registerClassPair(cls);
 
     const inst = Class.fromRaw(cls).?.send(Object, "alloc", .{}).send(Object, "init", .{});
-    defer inst.send(void, "dealloc", .{});
+    defer inst.send(void, "release", .{});
     try testing.expectEqual(@as(c_int, 142), inst.send(c_int, "bridgeTest:", .{@as(c_int, 42)}));
 }

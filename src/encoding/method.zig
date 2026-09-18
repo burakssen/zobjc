@@ -178,7 +178,7 @@ pub fn methodEncodingLength(comptime F: type) usize {
         zig_type.assertObjCEncodable(RetType);
 
         var total_len: usize = encoder.encodedLength(RetType);
-        // Implicit self/._cmd are always '@' + ':' in canonical method
+        // Implicit self/_cmd are always '@' + ':' in canonical method
         // metadata, regardless of the Zig receiver type (Object vs Class).
         total_len += 2;
         for (fn_info.params[2..]) |param| {
