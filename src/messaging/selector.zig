@@ -5,16 +5,15 @@
 
 const std = @import("std");
 const raw = @import("raw");
-const runtime = @import("runtime");
 const wrapper = @import("internal").wrapper;
-const Selector = runtime.Selector;
 
 // Use the Objective-C runtime's interned selector machinery directly with zero extra caching.
 
 /// Returns true if `T` is an acceptable selector representation.
 pub fn isValidSelector(comptime T: type) bool {
-    if (T == Selector or T == raw.SEL or T == *raw.objc_selector) return true;
-    if (wrapper.isObjCWrapper(T) and wrapper.wrapperKind(T) == .selector) return true;
+    if (T == raw.SEL or T == *raw.objc_selector or T == ?raw.SEL) return true;
+    // NOTE: explicit `comptime` is load-bearing (see NOTE in abi/type.zig).
+    if (comptime wrapper.isObjCWrapper(T) and wrapper.wrapperKind(T) == .selector) return true;
     switch (@typeInfo(T)) {
         .pointer => |ptr| {
             if (ptr.child == u8 and ptr.sentinel_ptr != null) return true;
@@ -69,10 +68,16 @@ pub inline fn toRaw(sel: anytype) raw.SEL {
     const T = @TypeOf(sel);
     assertValidSelector(T);
 
-    if (comptime T == Selector) {
-        return sel.ptr;
-    } else if (comptime (T == raw.SEL or T == *raw.objc_selector)) {
+    if (comptime T == raw.SEL or T == *raw.objc_selector) {
         return sel;
+    } else if (comptime @typeInfo(T) == .optional) {
+        const Child = @typeInfo(T).optional.child;
+        if (sel) |s| {
+            if (comptime Child == raw.SEL or Child == *raw.objc_selector) return s;
+            if (comptime wrapper.isObjCWrapper(Child)) return s.ptr;
+            unreachable;
+        }
+        return null;
     } else if (comptime wrapper.isObjCWrapper(T)) {
         return sel.ptr;
     } else {
@@ -88,6 +93,6 @@ pub inline fn toRaw(sel: anytype) raw.SEL {
             },
             else => unreachable,
         };
-        return Selector.register(str_slice).toRaw();
+        return raw.objc.sel_registerName(str_slice.ptr);
     }
 }

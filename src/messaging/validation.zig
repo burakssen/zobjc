@@ -2,7 +2,6 @@
 
 const std = @import("std");
 const raw = @import("raw");
-const runtime = @import("runtime");
 const wrapper = @import("internal").wrapper;
 const receiver_mod = @import("receiver.zig");
 const selector_mod = @import("selector.zig");
@@ -44,17 +43,12 @@ pub fn assertValidArgument(comptime T: type, comptime index: usize) void {
             "A Zig slice is not a C string. Pass a sentinel-terminated string literal or [:0]const u8.");
     }
 
-    // High-level runtime handles
-    if (T == runtime.Object or T == ?runtime.Object) return;
-    if (T == runtime.Class or T == ?runtime.Class) return;
-    if (T == runtime.Selector or T == ?runtime.Selector) return;
-    if (T == runtime.Imp or T == ?runtime.Imp) return;
+    // Explicit wrapper handles (runtime or custom) via the shared trait.
+    // NOTE: explicit `comptime` is load-bearing (see NOTE in abi/type.zig).
+    if (comptime wrapper.isObjCWrapper(T)) return;
 
     // Raw handles
     if (T == raw.id or T == raw.Class or T == raw.SEL or T == raw.IMP) return;
-
-    // Explicit Objective-C wrapper types (objc_wrapper / asObject+fromObject / toObjC+fromObjC).
-    if (wrapper.isObjCWrapper(T)) return;
 
     // Sentinel strings
     if (arguments_mod.isSentinelString(T)) return;
@@ -131,17 +125,12 @@ pub fn assertValidReturn(comptime Return: type) void {
         }
     }
 
-    // High-level handles
-    if (Return == runtime.Object or Return == ?runtime.Object) return;
-    if (Return == runtime.Class or Return == ?runtime.Class) return;
-    if (Return == runtime.Selector or Return == ?runtime.Selector) return;
-    if (Return == runtime.Imp or Return == ?runtime.Imp) return;
+    // Explicit wrapper handles (runtime or custom) via the shared trait.
+    // NOTE: explicit `comptime` is load-bearing (see NOTE in abi/type.zig).
+    if (comptime wrapper.isObjCWrapper(Return)) return;
 
     // Raw handles
     if (Return == raw.id or Return == raw.Class or Return == raw.SEL or Return == raw.IMP) return;
-
-    // Explicit wrapper returns (e.g. framework handle structs).
-    if (wrapper.isObjCWrapper(Return)) return;
 
     // Normalized ABI type check
     const AbiReturn = returns_mod.AbiReturnType(Return);

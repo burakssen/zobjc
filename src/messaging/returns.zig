@@ -6,12 +6,7 @@
 const std = @import("std");
 const testing = std.testing;
 const raw = @import("raw");
-const runtime = @import("runtime");
 const wrapper = @import("internal").wrapper;
-const Object = runtime.Object;
-const Class = runtime.Class;
-const Selector = runtime.Selector;
-const Imp = runtime.Imp;
 
 // Explicit type mapping matching ABI classification requirements with zero allocation.
 
@@ -19,22 +14,9 @@ const Imp = runtime.Imp;
 pub fn AbiReturnType(comptime T: type) type {
     if (T == void) return void;
 
-    // 1. High-level runtime handles
-    if (T == Object or T == ?Object) return raw.id;
-    if (T == Class or T == ?Class) return raw.Class;
-    if (T == Selector or T == ?Selector) return raw.SEL;
-    if (T == Imp or T == ?Imp) return raw.IMP;
-
-    if (@typeInfo(T) == .@"struct" and wrapper.isObjCWrapper(T)) {
-        return switch (wrapper.wrapperKind(T)) {
-            .object => raw.id,
-            .class => raw.Class,
-            .selector => raw.SEL,
-            .imp => raw.IMP,
-            .none => unreachable,
-        };
-    }
-    if (@typeInfo(T) == .optional and wrapper.isObjCWrapper(T)) {
+    // 1. Explicit wrappers (direct or optional) decay to their raw handle.
+    // NOTE: explicit `comptime` is load-bearing (see NOTE in abi/type.zig).
+    if (comptime wrapper.isObjCWrapper(T)) {
         return switch (wrapper.wrapperKind(T)) {
             .object => raw.id,
             .class => raw.Class,
@@ -60,23 +42,7 @@ pub fn AbiReturnType(comptime T: type) type {
 pub inline fn fromAbi(comptime Return: type, raw_val: AbiReturnType(Return)) Return {
     if (comptime Return == void) return {};
 
-    if (comptime Return == ?Object) {
-        return Object.fromRaw(raw_val);
-    } else if (comptime Return == Object) {
-        return Object.fromRaw(raw_val) orelse @panic("Objective-C message returned nil for non-null Object return type");
-    } else if (comptime Return == ?Class) {
-        return Class.fromRaw(raw_val);
-    } else if (comptime Return == Class) {
-        return Class.fromRaw(raw_val) orelse @panic("Objective-C message returned nil for non-null Class return type");
-    } else if (comptime Return == ?Selector) {
-        return Selector.fromRaw(raw_val);
-    } else if (comptime Return == Selector) {
-        return Selector.fromRaw(raw_val) orelse @panic("Objective-C message returned nil for non-null Selector return type");
-    } else if (comptime Return == ?Imp) {
-        return Imp.fromRaw(raw_val);
-    } else if (comptime Return == Imp) {
-        return Imp.fromRaw(raw_val) orelse @panic("Objective-C message returned nil for non-null Imp return type");
-    } else if (comptime @typeInfo(Return) == .optional and wrapper.isObjCWrapper(Return)) {
+    if (comptime @typeInfo(Return) == .optional and wrapper.isObjCWrapper(Return)) {
         const Child = @typeInfo(Return).optional.child;
         if (raw_val) |p| {
             return Child{ .ptr = @ptrCast(p) };
@@ -104,15 +70,40 @@ const Rect = extern struct {
     h: f64,
 };
 
+const FixtureObject = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = true;
+};
+
+const FixtureClass = struct {
+    ptr: *raw.objc_class,
+    pub const objc_wrapper = true;
+};
+
+const FixtureSelector = struct {
+    ptr: *raw.objc_selector,
+    pub const objc_wrapper = true;
+};
+
+const FixtureImp = struct {
+    ptr: *const fn () callconv(.c) void,
+    pub const objc_wrapper = true;
+};
+
+const CustomObject = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = true;
+};
+
 test "returns: normalization to raw ABI return types" {
-    try testing.expectEqual(raw.id, AbiReturnType(Object));
-    try testing.expectEqual(raw.id, AbiReturnType(?Object));
-    try testing.expectEqual(raw.Class, AbiReturnType(Class));
-    try testing.expectEqual(raw.Class, AbiReturnType(?Class));
-    try testing.expectEqual(raw.SEL, AbiReturnType(Selector));
-    try testing.expectEqual(raw.SEL, AbiReturnType(?Selector));
-    try testing.expectEqual(raw.IMP, AbiReturnType(Imp));
-    try testing.expectEqual(raw.IMP, AbiReturnType(?Imp));
+    try testing.expectEqual(raw.id, AbiReturnType(FixtureObject));
+    try testing.expectEqual(raw.id, AbiReturnType(?FixtureObject));
+    try testing.expectEqual(raw.Class, AbiReturnType(FixtureClass));
+    try testing.expectEqual(raw.Class, AbiReturnType(?FixtureClass));
+    try testing.expectEqual(raw.SEL, AbiReturnType(FixtureSelector));
+    try testing.expectEqual(raw.SEL, AbiReturnType(?FixtureSelector));
+    try testing.expectEqual(raw.IMP, AbiReturnType(FixtureImp));
+    try testing.expectEqual(raw.IMP, AbiReturnType(?FixtureImp));
     try testing.expectEqual(c_int, AbiReturnType(TestEnum));
     try testing.expectEqual(void, AbiReturnType(void));
     try testing.expectEqual(Rect, AbiReturnType(Rect));
@@ -125,9 +116,15 @@ test "returns: fromAbi value conversion" {
     const v = fromAbi(void, {});
     try testing.expectEqual({}, v);
 
-    const opt_obj = fromAbi(?Object, null);
-    try testing.expectEqual(@as(?Object, null), opt_obj);
+    const opt_obj = fromAbi(?FixtureObject, null);
+    try testing.expectEqual(@as(?FixtureObject, null), opt_obj);
 
-    const opt_cls = fromAbi(?Class, null);
-    try testing.expectEqual(@as(?Class, null), opt_cls);
+    const opt_cls = fromAbi(?FixtureClass, null);
+    try testing.expectEqual(@as(?FixtureClass, null), opt_cls);
+}
+
+test "returns: optional custom wrappers convert element-wise" {
+    try testing.expectEqual(@as(?CustomObject, null), fromAbi(?CustomObject, null));
+    const w = fromAbi(?CustomObject, @as(raw.id, @ptrFromInt(0x2000)));
+    try testing.expectEqual(@as(*raw.objc_object, @ptrFromInt(0x2000)), w.?.ptr);
 }

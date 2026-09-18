@@ -5,12 +5,7 @@
 const std = @import("std");
 const testing = std.testing;
 const raw = @import("raw");
-const runtime = @import("runtime");
 const wrapper = @import("internal").wrapper;
-const Object = runtime.Object;
-const Class = runtime.Class;
-const Selector = runtime.Selector;
-const Imp = runtime.Imp;
 
 // Pure compile-time tuple and type mapping with zero runtime overhead.
 
@@ -30,13 +25,9 @@ pub fn isSentinelString(comptime T: type) bool {
 
 /// Normalizes a high-level Zig type `T` into its raw C ABI parameter type.
 pub fn AbiArgumentType(comptime T: type) type {
-    // 1. High-level runtime handles
-    if (T == Object or T == ?Object) return raw.id;
-    if (T == Class or T == ?Class) return raw.Class;
-    if (T == Selector or T == ?Selector) return raw.SEL;
-    if (T == Imp or T == ?Imp) return raw.IMP;
-
-    if (@typeInfo(T) == .@"struct" and wrapper.isObjCWrapper(T)) {
+    // 1. Explicit wrappers (direct or optional) decay to their raw handle.
+    // NOTE: explicit `comptime` is load-bearing (see NOTE in abi/type.zig).
+    if (comptime wrapper.isObjCWrapper(T)) {
         return switch (wrapper.wrapperKind(T)) {
             .object => raw.id,
             .class => raw.Class,
@@ -80,27 +71,13 @@ pub fn AbiArgumentType(comptime T: type) type {
 pub inline fn toAbi(val: anytype) AbiArgumentType(@TypeOf(val)) {
     const T = @TypeOf(val);
 
-    if (comptime T == Object) {
-        return val.ptr;
-    } else if (comptime T == ?Object) {
-        if (val) |o| return o.ptr;
-        return null;
-    } else if (comptime T == Class) {
-        return val.ptr;
-    } else if (comptime T == ?Class) {
-        if (val) |c| return c.ptr;
-        return null;
-    } else if (comptime T == Selector) {
-        return val.ptr;
-    } else if (comptime T == ?Selector) {
-        if (val) |s| return s.ptr;
-        return null;
-    } else     if (comptime T == Imp) {
-        return val.ptr;
-    } else if (comptime T == ?Imp) {
-        if (val) |i| return i.ptr;
-        return null;
-    } else if (comptime wrapper.isObjCWrapper(T)) {
+    if (comptime wrapper.isObjCWrapper(T)) {
+        // Optional wrappers decay element-wise; the raw handle types are
+        // already nullable at the C level.
+        if (@typeInfo(T) == .optional) {
+            if (val) |v| return v.ptr;
+            return null;
+        }
         return val.ptr;
     } else if (comptime isSentinelString(T)) {
         return @as([*:0]const u8, @ptrCast(val));
@@ -143,14 +120,39 @@ const Point = extern struct {
     y: f64,
 };
 
+const FixtureObject = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = true;
+};
+
+const FixtureClass = struct {
+    ptr: *raw.objc_class,
+    pub const objc_wrapper = true;
+};
+
+const FixtureSelector = struct {
+    ptr: *raw.objc_selector,
+    pub const objc_wrapper = true;
+};
+
+const FixtureImp = struct {
+    ptr: *const fn () callconv(.c) void,
+    pub const objc_wrapper = true;
+};
+
+const CustomObject = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = true;
+};
+
 test "arguments: handle normalization to raw ABI types" {
-    try testing.expectEqual(raw.id, AbiArgumentType(Object));
-    try testing.expectEqual(raw.id, AbiArgumentType(?Object));
-    try testing.expectEqual(raw.Class, AbiArgumentType(Class));
-    try testing.expectEqual(raw.Class, AbiArgumentType(?Class));
-    try testing.expectEqual(raw.SEL, AbiArgumentType(Selector));
-    try testing.expectEqual(raw.SEL, AbiArgumentType(?Selector));
-    try testing.expectEqual(raw.IMP, AbiArgumentType(Imp));
+    try testing.expectEqual(raw.id, AbiArgumentType(FixtureObject));
+    try testing.expectEqual(raw.id, AbiArgumentType(?FixtureObject));
+    try testing.expectEqual(raw.Class, AbiArgumentType(FixtureClass));
+    try testing.expectEqual(raw.Class, AbiArgumentType(?FixtureClass));
+    try testing.expectEqual(raw.SEL, AbiArgumentType(FixtureSelector));
+    try testing.expectEqual(raw.SEL, AbiArgumentType(?FixtureSelector));
+    try testing.expectEqual(raw.IMP, AbiArgumentType(FixtureImp));
 }
 
 test "arguments: enum normalization to tag type" {
@@ -176,7 +178,7 @@ test "arguments: extern struct remains unchanged" {
 
 test "arguments: tuple normalization" {
     const ArgsTuple = struct {
-        Object,
+        FixtureObject,
         TestEnum,
         *const [5:0]u8,
         Point,
@@ -191,12 +193,20 @@ test "arguments: tuple normalization" {
 }
 
 test "arguments: wrapper ABI decay" {
-    try testing.expectEqual(@sizeOf(Object), @sizeOf(raw.id));
-    try testing.expectEqual(@alignOf(Object), @alignOf(raw.id));
+    try testing.expectEqual(@sizeOf(FixtureObject), @sizeOf(raw.id));
+    try testing.expectEqual(@alignOf(FixtureObject), @alignOf(raw.id));
 
-    try testing.expectEqual(@sizeOf(Class), @sizeOf(raw.Class));
-    try testing.expectEqual(@alignOf(Class), @alignOf(raw.Class));
+    try testing.expectEqual(@sizeOf(FixtureClass), @sizeOf(raw.Class));
+    try testing.expectEqual(@alignOf(FixtureClass), @alignOf(raw.Class));
 
-    try testing.expectEqual(@sizeOf(Selector), @sizeOf(raw.SEL));
-    try testing.expectEqual(@alignOf(Selector), @alignOf(raw.SEL));
+    try testing.expectEqual(@sizeOf(FixtureSelector), @sizeOf(raw.SEL));
+    try testing.expectEqual(@alignOf(FixtureSelector), @alignOf(raw.SEL));
+}
+
+test "arguments: optional custom wrappers decay to raw handles" {
+    try testing.expectEqual(raw.id, AbiArgumentType(?CustomObject));
+    try testing.expectEqual(@as(raw.id, null), toAbi(@as(?CustomObject, null)));
+    const w = CustomObject{ .ptr = @ptrFromInt(0x1000) };
+    try testing.expectEqual(@as(raw.id, @ptrFromInt(0x1000)), toAbi(w));
+    try testing.expectEqual(@as(raw.id, @ptrFromInt(0x1000)), toAbi(@as(?CustomObject, w)));
 }

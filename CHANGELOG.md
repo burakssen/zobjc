@@ -19,6 +19,12 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Decoupled `messaging` from `runtime` and the facade: handle normalization
+  (`receiver`/`arguments`/`returns`/`selector`/`validation`) is
+  wrapper-trait-authoritative, selectors register via `raw`, super dispatch
+  uses a `classToRaw` helper without `.ptr` duck typing, `invoke`/`callImp`
+  accept raw handles or narrow normalizers, and live tests moved to the
+  facade. Also fixed optional custom wrappers decaying to raw ABI handles.
 - Pinned `abi` admission with a `categorize` table test and
   `classifyReturn` handle/raw equivalence assertions at the facade.
 - Decoupled `abi` into a pure compile-time leaf with no `runtime`,

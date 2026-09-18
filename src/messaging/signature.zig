@@ -213,23 +213,6 @@ fn checkSignature(
     }
 }
 
-test "sendChecked: valid NSObject messages pass signature validation" {
-    const objc = @import("zobjc");
-    const NSObject = objc.requireClass("NSObject");
-
-    const obj = sendChecked(objc.Object, NSObject, "alloc", .{});
-    const init = sendChecked(objc.Object, obj, "init", .{});
-    defer init.send(void, "dealloc", .{});
-
-    // description -> @ ; hash -> NSUInteger ; isEqual: takes @, returns BOOL.
-    const desc = sendChecked(?objc.Object, init, "description", .{});
-    _ = desc;
-    const hash = sendChecked(usize, init, "hash", .{});
-    _ = hash;
-    const eq = sendChecked(raw.BOOL, init, "isEqual:", .{init});
-    try std.testing.expect(raw.boolResult(eq));
-}
-
 test "checkSignatures: table of encoding pairs" {
     const allocator = std.testing.allocator;
     const Case = struct {
@@ -268,9 +251,3 @@ test "checkSignatures: table of encoding pairs" {
     }
 }
 
-test "sendChecked: nil receiver short-circuits without lookup" {
-    const objc = @import("zobjc");
-    const nil_obj: ?objc.Object = null;
-    const result = sendChecked(?objc.Object, nil_obj, "description", .{});
-    try std.testing.expectEqual(@as(?objc.Object, null), result);
-}

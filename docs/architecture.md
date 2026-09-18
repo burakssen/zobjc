@@ -33,6 +33,9 @@ Rules:
   name.
 - `abi` is a compile-time leaf with no module imports: classification is by
   machine representation (`@typeInfo` shape/size/layout) only.
+- `messaging` sits above `abi` + `encoding` + `raw` + `internal` only: all
+  handle normalization goes through wrapper kinds, never `runtime` types by
+  name; live dispatch tests live at the facade.
 - `messaging` sits above `abi` + `encoding` + `raw` and shared traits.
 - `runtime`, `memory`, and `block` sit above `messaging` and traits.
 - The `zobjc` facade (`src/root.zig`) knows every subsystem; no subsystem
@@ -41,11 +44,11 @@ Rules:
 
 Status: the codebase is migrating toward this graph. New code must follow it;
 Target-vs-current status: `raw`, `internal`, `encoding`, and `abi`
-already match the target DAG. `abi` is a pure compile-time leaf: it imports
-no `runtime`, `encoding`, `internal`, facade, or even `raw` module; its
-classifier reasons about machine representation only. `wireModules()` keeps
-an explicit `legacy_facade_dependents` set (`block`, `memory`, `messaging`,
-`runtime`) with `abi` removed. Next: `messaging`.
+already match the target DAG. `messaging` joins them: it imports `abi`,
+`encoding`, `raw`, and `internal` only, with `runtime`/facade references
+removed from normalization and live tests moved to the facade.
+`wireModules()` keeps an explicit `legacy_facade_dependents` set (`block`,
+`memory`, `runtime`). Next: likely `runtime`.
 
 ## API layers
 

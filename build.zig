@@ -89,6 +89,9 @@ pub fn build(b: *std.Build) void {
     // raw tests call libobjc directly; link it explicitly now that raw no
     // longer imports the facade (which previously provided it transitively).
     test_modules.raw.linkSystemLibrary("objc", .{});
+    // Standalone messaging tests exercise raw runtime helpers directly now
+    // that the facade edge is gone (same treatment as raw above).
+    test_modules.messaging.linkSystemLibrary("objc", .{});
     const test_targets = [_]struct {
         name: []const u8,
         module: *std.Build.Module,
@@ -226,7 +229,6 @@ fn wireModules(modules: ModuleSet) void {
     const legacy_facade_dependents = [_]*std.Build.Module{
         modules.block,
         modules.memory,
-        modules.messaging,
         modules.runtime,
     };
     for (legacy_facade_dependents) |dependent| {
@@ -253,7 +255,6 @@ fn wireModules(modules: ModuleSet) void {
     modules.messaging.addImport("abi", modules.abi);
     modules.messaging.addImport("encoding", modules.encoding);
     modules.messaging.addImport("raw", modules.raw);
-    modules.messaging.addImport("runtime", modules.runtime);
     modules.messaging.addImport("internal", modules.internal);
 
     modules.runtime.addImport("block", modules.block);
