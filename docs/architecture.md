@@ -75,6 +75,9 @@ facade edges remain anywhere.
 
 ## Test layers
 
+`zig build test` runs an architecture guard that rejects
+`@import("zobjc")` from every subsystem source directory.
+
 Subsystem unit tests live beside their source and compile against minimal
 module dependencies. Live integration tests live in `tests/` as an
 independent module importing only the public facade:

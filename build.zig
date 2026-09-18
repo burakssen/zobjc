@@ -119,6 +119,26 @@ pub fn build(b: *std.Build) void {
         .{ .name = "runtime", .module = test_modules.runtime },
     };
     const test_step = b.step("test", "Run all zobjc tests");
+
+    // Architecture guard: reject subsystem imports of the zobjc facade.
+    // Runs on the host; test_step (not install) owns it.
+    const arch_check_module = b.createModule(.{
+        .root_source_file = b.path("tools/check_architecture.zig"),
+        .target = b.graph.host,
+        .optimize = .Debug,
+    });
+    const arch_check_exe = b.addExecutable(.{
+        .name = "check-architecture",
+        .root_module = arch_check_module,
+    });
+    const run_arch_check = b.addRunArtifact(arch_check_exe);
+    run_arch_check.setCwd(b.path("."));
+    test_step.dependOn(&run_arch_check.step);
+    const arch_check_tests = b.addTest(.{
+        .name = "test-architecture-checker",
+        .root_module = arch_check_module,
+    });
+    test_step.dependOn(&b.addRunArtifact(arch_check_tests).step);
     // NOTE: test-zobjc covers facade smoke tests only (no fixtures); the
     // integration target below owns encoding.m/abi.m/common.m explicitly.
     const integration_test_artifact = b.addTest(.{
