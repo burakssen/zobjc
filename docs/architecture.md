@@ -43,18 +43,16 @@ Rules:
   may import the facade. `build.zig:wireModules()` must not add upward edges
   (no `subsystem.addImport("zobjc", ...)`).
 
-Status: the codebase is migrating toward this graph. New code must follow it;
-Target-vs-current status: `raw`, `internal`, `encoding`, `abi`,
-`messaging`, and `memory` match the target DAG. Shared value types
-(`Selector`, `MethodDescription`, `PropertyAttribute`) live in `internal`,
-re-exported by `runtime` with unchanged identity; `memory` imports `raw`
-and `internal` only, with `runtime` -> `memory` the single remaining
-direction. `runtime` no longer imports `block`: `BlockMethodReplacement`
-and the Block-bridged class enumeration live in `block`, with the top-level
-facade aliases repointed. `block` → `runtime` is now a legitimate downward
-dependency. The sole remaining upward edge, and therefore the final cycle,
-is `block` → `zobjc`; `wireModules()` keeps an explicit
-`legacy_facade_dependents` set with only `block` in it.
+Status: the graph below is the enforced design, not a migration target.
+The facade imports subsystems. No subsystem imports the facade.
+Dependencies between subsystems point only downward.
+
+Module status: `raw`, `internal`, `encoding`, `abi`, `messaging`, `memory`,
+`runtime`, and `block` all match the DAG. Shared value types (`Selector`,
+`MethodDescription`, `PropertyAttribute`) live in `internal`, re-exported
+by `runtime` with unchanged identity. `block` imports `abi`, `encoding`,
+`memory`, `messaging`, `raw`, and `runtime` (all downward); no upward
+facade edges remain anywhere.
 
 ## API layers
 

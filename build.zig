@@ -96,6 +96,7 @@ pub fn build(b: *std.Build) void {
     // directly (conversion/layout/size checks stay in-module).
     test_modules.runtime.linkSystemLibrary("objc", .{});
     test_modules.memory.linkSystemLibrary("objc", .{});
+    addBlockTestFixture(test_modules.block, b);
     const test_targets = [_]struct {
         name: []const u8,
         module: *std.Build.Module,
@@ -228,15 +229,8 @@ fn wireModules(modules: ModuleSet) void {
     for (subsystems) |subsystem| {
         modules.zobjc.addImport(subsystem.name, subsystem.module);
     }
-    // Temporary: remaining upward facade edges, listed explicitly so future
-    // removals are obvious. abi, encoding, internal, messaging, memory, raw,
-    // and runtime are already clean; only block remains.
-    const legacy_facade_dependents = [_]*std.Build.Module{
-        modules.block,
-    };
-    for (legacy_facade_dependents) |dependent| {
-        dependent.addImport("zobjc", modules.zobjc);
-    }
+    // Subsystems must never import the zobjc facade.
+    // All edges below point strictly downward.
 
 
     modules.internal.addImport("raw", modules.raw);
@@ -266,6 +260,14 @@ fn wireModules(modules: ModuleSet) void {
     modules.runtime.addImport("internal", modules.internal);
 }
 
+fn addBlockTestFixture(module: *std.Build.Module, b: *std.Build) void {
+    module.linkSystemLibrary("objc", .{});
+    module.addCSourceFile(.{
+        .file = b.path("fixtures/block.m"),
+        .flags = &.{"-fblocks"},
+    });
+}
+
 fn addTestFixtures(module: *std.Build.Module, b: *std.Build) void {
     module.linkSystemLibrary("objc", .{});
     module.addCSourceFile(.{
@@ -276,8 +278,8 @@ fn addTestFixtures(module: *std.Build.Module, b: *std.Build) void {
         .file = b.path("fixtures/abi.m"),
         .flags = &.{},
     });
-    module.addCSourceFile(.{
-        .file = b.path("fixtures/block.m"),
-        .flags = &.{"-fblocks"},
-    });
+    // NOTE: fixtures/block.m is attached to the block test module only
+    // (see addBlockTestFixture); it reaches this binary transitively
+    // through the block test-module import. Attaching it here as well
+    // would link its symbols twice.
 }

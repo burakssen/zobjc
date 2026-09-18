@@ -19,6 +19,11 @@ All notable changes to zobjc are documented here. Format follows
 
 ### Fixed
 
+- Removed the final `block` -> `zobjc` facade dependency. The subsystem
+  module graph is now acyclic, with all subsystem dependencies wired
+  explicitly downward.
+- Block tests now link libobjc and their Clang Block fixture directly
+  instead of inheriting test linkage through the facade.
 - Broke `runtime` -> `block`: `BlockMethodReplacement` and Block-bridged
   class enumeration moved into `block`.
 - Broke `memory` -> `runtime`: shared `Selector`/`MethodDescription`/
@@ -29,7 +34,7 @@ All notable changes to zobjc are documented here. Format follows
 - Decoupled `runtime` and `memory` from the facade: live runtime and
   ownership tests moved to facade integration coverage while pure
   conversion/layout tests stay in-module; both test targets link `libobjc`
-  explicitly. Only `block` retains a facade edge.
+  explicitly; no facade edges remain.
 - Simplified the wrapper trait to the two meaningful `.imp` field shapes
   (`raw.IMP` and the unwrapped pointer), dropping the nested `?raw.IMP`
   form; `callImp` normalizes both shapes and fails closed on null.

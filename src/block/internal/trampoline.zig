@@ -36,7 +36,7 @@ pub fn InvokeTrampoline(
             return convert.toAbi(ret_val);
         }
 
-        // // fixed-arity static dispatcher for 0..8 block arguments
+        // fixed-arity static dispatcher for 0..8 block arguments
         pub const Runner = switch (params.len) {
             0 => struct {
                 pub fn trampoline(raw_block: *anyopaque) callconv(.c) AbiRet {

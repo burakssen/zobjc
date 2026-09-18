@@ -89,7 +89,7 @@ pub fn createBlock(
         lit.getCaptures().* = captures;
     }
 
-    // // promote stack literal to heap immediately via _Block_copy; stack literal never escapes
+    // promote stack literal to heap immediately via _Block_copy; stack literal never escapes
     const copied = raw.blocks._Block_copy(&lit) orelse return error.OutOfMemory;
     return owned_mod.OwnedBlock(Signature).fromRaw(@ptrCast(@alignCast(copied)));
 }

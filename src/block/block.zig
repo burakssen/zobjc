@@ -64,7 +64,7 @@ pub fn Block(comptime Signature: type) type {
             if (!self.hasSignature()) return null;
             const desc_bytes: [*]const u8 = @ptrCast(self.ptr.descriptor);
             const has_copy_dispose = (self.ptr.flags & raw.blocks.BLOCK_HAS_COPY_DISPOSE) != 0;
-            // // direct offset calculation matching Apple large descriptor ABI
+            // direct offset calculation matching Apple large descriptor ABI
             const sig_offset: usize = if (has_copy_dispose) 32 else 16;
             const sig_ptr: *const ?[*:0]const u8 = @ptrCast(@alignCast(desc_bytes + sig_offset));
             return sig_ptr.*;

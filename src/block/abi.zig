@@ -25,7 +25,7 @@ pub const blockSignature = signature_mod.blockSignature;
 pub fn usesStret(comptime Return: type) bool {
     const AbiReturn = messaging.AbiReturnType(Return);
     const convention = abi.returnConvention(AbiReturn);
-    // // strictly derived from ABI return classification; never checks @typeInfo(Return) == .@"struct"
+    // strictly derived from ABI return classification; never checks @typeInfo(Return) == .@"struct"
     return convention == .stret;
 }
 

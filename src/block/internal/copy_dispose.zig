@@ -35,7 +35,7 @@ pub fn CopyDisposeHelpers(comptime Captures: type) type {
             const src: *Lit = @ptrCast(@alignCast(src_ptr));
             const src_caps = src.getCaptures();
 
-            // // dispose managed captures in reverse declaration order
+            // dispose managed captures in reverse declaration order
             comptime var i = struct_fields.len;
             inline while (i > 0) {
                 i -= 1;
