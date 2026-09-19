@@ -25,7 +25,6 @@ pub fn InvokeTrampoline(
 
     const CallbackFn = @TypeOf(callback);
     const cb_info = @typeInfo(CallbackFn).@"fn";
-    const has_captures_param = cb_info.params.len == params.len + 1;
 
     return struct {
         fn convertArg(comptime T: type, raw_val: anytype) T {
@@ -36,34 +35,81 @@ pub fn InvokeTrampoline(
             return convert.toAbi(ret_val);
         }
 
-        // fixed-arity static dispatcher for 0..8 block arguments
+        fn isCaptureParam(comptime P: type, comptime C: type) bool {
+            if (P == C) return true;
+            if (P == *C or P == *const C) return true;
+            if (@typeInfo(C) == .@"struct" and @typeInfo(C).@"struct".fields.len == 1) {
+                const Inner = @typeInfo(C).@"struct".fields[0].type;
+                if (P == Inner or P == *Inner or P == *const Inner) return true;
+            }
+            return false;
+        }
+
+        inline fn getCaptureArg(comptime P: type, lit: *Lit) P {
+            if (comptime P == *Captures or P == *const Captures) {
+                return lit.getCaptures();
+            } else if (comptime P == Captures) {
+                return lit.getCaptures().*;
+            } else if (comptime @typeInfo(Captures) == .@"struct" and @typeInfo(Captures).@"struct".fields.len == 1) {
+                const field_name = @typeInfo(Captures).@"struct".fields[0].name;
+                const FieldType = @typeInfo(Captures).@"struct".fields[0].type;
+                if (comptime P == FieldType) {
+                    return @field(lit.getCaptures(), field_name);
+                } else if (comptime P == *FieldType or P == *const FieldType) {
+                    return &@field(lit.getCaptures(), field_name);
+                }
+            }
+            return lit.getCaptures().*;
+        }
+
+        inline fn invokeCallback(lit: *Lit, all_args: anytype) AbiRet {
+            const cb_count = cb_info.params.len;
+            const has_caps = comptime blk: {
+                if (@sizeOf(Captures) == 0) break :blk false;
+                if (cb_count == params.len + 1) break :blk true;
+                if (cb_count > 0 and isCaptureParam(cb_info.params[0].type.?, Captures)) break :blk true;
+                break :blk false;
+            };
+
+            const res = if (comptime has_caps) blk: {
+                const cap = getCaptureArg(cb_info.params[0].type.?, lit);
+                const block_arg_count = cb_count - 1;
+                break :blk switch (block_arg_count) {
+                    0 => callback(cap),
+                    1 => callback(cap, all_args[0]),
+                    2 => if (all_args.len >= 2) callback(cap, all_args[0], all_args[1]) else unreachable,
+                    3 => if (all_args.len >= 3) callback(cap, all_args[0], all_args[1], all_args[2]) else unreachable,
+                    4 => if (all_args.len >= 4) callback(cap, all_args[0], all_args[1], all_args[2], all_args[3]) else unreachable,
+                    5 => if (all_args.len >= 5) callback(cap, all_args[0], all_args[1], all_args[2], all_args[3], all_args[4]) else unreachable,
+                    else => @compileError("Too many callback arguments"),
+                };
+            } else blk: {
+                break :blk switch (cb_count) {
+                    0 => callback(),
+                    1 => callback(all_args[0]),
+                    2 => if (all_args.len >= 2) callback(all_args[0], all_args[1]) else unreachable,
+                    3 => if (all_args.len >= 3) callback(all_args[0], all_args[1], all_args[2]) else unreachable,
+                    4 => if (all_args.len >= 4) callback(all_args[0], all_args[1], all_args[2], all_args[3]) else unreachable,
+                    5 => if (all_args.len >= 5) callback(all_args[0], all_args[1], all_args[2], all_args[3], all_args[4]) else unreachable,
+                    else => @compileError("Too many callback arguments"),
+                };
+            };
+            return convertRet(res);
+        }
+
+        // fixed-arity static dispatcher for 0..5 block arguments
         pub const Runner = switch (params.len) {
             0 => struct {
                 pub fn trampoline(raw_block: *anyopaque) callconv(.c) AbiRet {
                     const lit: *Lit = @ptrCast(@alignCast(raw_block));
-                    if (has_captures_param) {
-                        const caps = lit.getCaptures();
-                        const res = callback(caps);
-                        return convertRet(res);
-                    } else {
-                        const res = callback();
-                        return convertRet(res);
-                    }
+                    return invokeCallback(lit, .{});
                 }
             },
             1 => struct {
                 const A0 = convert.AbiArgumentType(params[0].type.?);
                 pub fn trampoline(raw_block: *anyopaque, a0: A0) callconv(.c) AbiRet {
                     const lit: *Lit = @ptrCast(@alignCast(raw_block));
-                    const p0 = convertArg(params[0].type.?, a0);
-                    if (has_captures_param) {
-                        const caps = lit.getCaptures();
-                        const res = callback(caps, p0);
-                        return convertRet(res);
-                    } else {
-                        const res = callback(p0);
-                        return convertRet(res);
-                    }
+                    return invokeCallback(lit, .{convertArg(params[0].type.?, a0)});
                 }
             },
             2 => struct {
@@ -71,16 +117,10 @@ pub fn InvokeTrampoline(
                 const A1 = convert.AbiArgumentType(params[1].type.?);
                 pub fn trampoline(raw_block: *anyopaque, a0: A0, a1: A1) callconv(.c) AbiRet {
                     const lit: *Lit = @ptrCast(@alignCast(raw_block));
-                    const p0 = convertArg(params[0].type.?, a0);
-                    const p1 = convertArg(params[1].type.?, a1);
-                    if (has_captures_param) {
-                        const caps = lit.getCaptures();
-                        const res = callback(caps, p0, p1);
-                        return convertRet(res);
-                    } else {
-                        const res = callback(p0, p1);
-                        return convertRet(res);
-                    }
+                    return invokeCallback(lit, .{
+                        convertArg(params[0].type.?, a0),
+                        convertArg(params[1].type.?, a1),
+                    });
                 }
             },
             3 => struct {
@@ -89,17 +129,11 @@ pub fn InvokeTrampoline(
                 const A2 = convert.AbiArgumentType(params[2].type.?);
                 pub fn trampoline(raw_block: *anyopaque, a0: A0, a1: A1, a2: A2) callconv(.c) AbiRet {
                     const lit: *Lit = @ptrCast(@alignCast(raw_block));
-                    const p0 = convertArg(params[0].type.?, a0);
-                    const p1 = convertArg(params[1].type.?, a1);
-                    const p2 = convertArg(params[2].type.?, a2);
-                    if (has_captures_param) {
-                        const caps = lit.getCaptures();
-                        const res = callback(caps, p0, p1, p2);
-                        return convertRet(res);
-                    } else {
-                        const res = callback(p0, p1, p2);
-                        return convertRet(res);
-                    }
+                    return invokeCallback(lit, .{
+                        convertArg(params[0].type.?, a0),
+                        convertArg(params[1].type.?, a1),
+                        convertArg(params[2].type.?, a2),
+                    });
                 }
             },
             4 => struct {
@@ -109,18 +143,12 @@ pub fn InvokeTrampoline(
                 const A3 = convert.AbiArgumentType(params[3].type.?);
                 pub fn trampoline(raw_block: *anyopaque, a0: A0, a1: A1, a2: A2, a3: A3) callconv(.c) AbiRet {
                     const lit: *Lit = @ptrCast(@alignCast(raw_block));
-                    const p0 = convertArg(params[0].type.?, a0);
-                    const p1 = convertArg(params[1].type.?, a1);
-                    const p2 = convertArg(params[2].type.?, a2);
-                    const p3 = convertArg(params[3].type.?, a3);
-                    if (has_captures_param) {
-                        const caps = lit.getCaptures();
-                        const res = callback(caps, p0, p1, p2, p3);
-                        return convertRet(res);
-                    } else {
-                        const res = callback(p0, p1, p2, p3);
-                        return convertRet(res);
-                    }
+                    return invokeCallback(lit, .{
+                        convertArg(params[0].type.?, a0),
+                        convertArg(params[1].type.?, a1),
+                        convertArg(params[2].type.?, a2),
+                        convertArg(params[3].type.?, a3),
+                    });
                 }
             },
             5 => struct {
@@ -131,19 +159,13 @@ pub fn InvokeTrampoline(
                 const A4 = convert.AbiArgumentType(params[4].type.?);
                 pub fn trampoline(raw_block: *anyopaque, a0: A0, a1: A1, a2: A2, a3: A3, a4: A4) callconv(.c) AbiRet {
                     const lit: *Lit = @ptrCast(@alignCast(raw_block));
-                    const p0 = convertArg(params[0].type.?, a0);
-                    const p1 = convertArg(params[1].type.?, a1);
-                    const p2 = convertArg(params[2].type.?, a2);
-                    const p3 = convertArg(params[3].type.?, a3);
-                    const p4 = convertArg(params[4].type.?, a4);
-                    if (has_captures_param) {
-                        const caps = lit.getCaptures();
-                        const res = callback(caps, p0, p1, p2, p3, p4);
-                        return convertRet(res);
-                    } else {
-                        const res = callback(p0, p1, p2, p3, p4);
-                        return convertRet(res);
-                    }
+                    return invokeCallback(lit, .{
+                        convertArg(params[0].type.?, a0),
+                        convertArg(params[1].type.?, a1),
+                        convertArg(params[2].type.?, a2),
+                        convertArg(params[3].type.?, a3),
+                        convertArg(params[4].type.?, a4),
+                    });
                 }
             },
             else => @compileError("Block signatures with more than 5 arguments are currently unsupported"),

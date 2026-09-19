@@ -75,10 +75,10 @@ pub inline fn toAbi(val: anytype) AbiArgumentType(@TypeOf(val)) {
         // Optional wrappers decay element-wise; the raw handle types are
         // already nullable at the C level.
         if (@typeInfo(T) == .optional) {
-            if (val) |v| return v.ptr;
+            if (val) |v| return @ptrCast(v.ptr);
             return null;
         }
-        return val.ptr;
+        return @ptrCast(val.ptr);
     } else if (comptime isSentinelString(T)) {
         return @as([*:0]const u8, @ptrCast(val));
     } else if (comptime @typeInfo(T) == .@"enum") {
@@ -98,9 +98,24 @@ pub fn NormalizeTupleTypes(comptime Args: type) type {
     return @Tuple(&abi_types);
 }
 
+/// Returns true if any argument in `Args` requires ABI normalization.
+pub inline fn needsNormalization(comptime Args: type) bool {
+    const fields = @typeInfo(Args).@"struct".fields;
+    if (fields.len == 0) return false;
+    inline for (fields) |f| {
+        if (AbiArgumentType(f.type) != f.type) return true;
+    }
+    return false;
+}
+
 /// Converts a tuple of public argument values to a tuple of ABI values.
-pub inline fn normalizeTupleValues(args: anytype) NormalizeTupleTypes(@TypeOf(args)) {
+// if no arguments need ABI decay, return the tuple unchanged
+pub inline fn normalizeTupleValues(args: anytype) if (!needsNormalization(@TypeOf(args))) @TypeOf(args) else NormalizeTupleTypes(@TypeOf(args)) {
     const Args = @TypeOf(args);
+    if (comptime !needsNormalization(Args)) {
+        return args;
+    }
+
     const fields = @typeInfo(Args).@"struct".fields;
     var result: NormalizeTupleTypes(Args) = undefined;
 
@@ -209,4 +224,25 @@ test "arguments: optional custom wrappers decay to raw handles" {
     const w = CustomObject{ .ptr = @ptrFromInt(0x1000) };
     try testing.expectEqual(@as(raw.id, @ptrFromInt(0x1000)), toAbi(w));
     try testing.expectEqual(@as(raw.id, @ptrFromInt(0x1000)), toAbi(@as(?CustomObject, w)));
+}
+
+const FixtureBlock = struct {
+    ptr: *raw.blocks.Block_layout,
+};
+
+const FixtureOwnedBlock = struct {
+    ptr: ?*raw.blocks.Block_layout = null,
+};
+
+test "arguments: Block and OwnedBlock decay to raw.id" {
+    try testing.expectEqual(raw.id, AbiArgumentType(FixtureBlock));
+    try testing.expectEqual(raw.id, AbiArgumentType(?FixtureBlock));
+    try testing.expectEqual(raw.id, AbiArgumentType(FixtureOwnedBlock));
+    try testing.expectEqual(raw.id, AbiArgumentType(?FixtureOwnedBlock));
+
+    const blk = FixtureBlock{ .ptr = @ptrFromInt(0x3000) };
+    try testing.expectEqual(@as(raw.id, @ptrFromInt(0x3000)), toAbi(blk));
+
+    const owned_blk = FixtureOwnedBlock{ .ptr = @ptrFromInt(0x4000) };
+    try testing.expectEqual(@as(raw.id, @ptrFromInt(0x4000)), toAbi(owned_blk));
 }

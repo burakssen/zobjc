@@ -48,7 +48,7 @@ pub fn countColons(comptime str: []const u8) comptime_int {
 
 /// Verifies that the colon count in a comptime string selector matches the number of supplied arguments.
 pub fn validateColonCount(comptime sel_name: []const u8, comptime arg_count: usize) void {
-    const colons = countColons(sel_name);
+    const colons: comptime_int = countColons(sel_name);
     if (comptime colons != arg_count) {
         @compileError(std.fmt.comptimePrint(
             "Selector \"{s}\" expects {d} explicit argument{s}, but {d} {s} provided.",

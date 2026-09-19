@@ -9,21 +9,12 @@ const CaptureTraits = traits_mod.CaptureTraits;
 
 /// Storage type matching `Captures`.
 pub fn CaptureStorage(comptime Captures: type) type {
-    const info = @typeInfo(Captures);
-    if (info != .@"struct") {
-        @compileError("Block captures must be a struct, got " ++ @typeName(Captures));
-    }
     return Captures;
 }
 
 /// Metadata and layout analysis for a Block's capture payload.
 pub fn CaptureInfo(comptime Captures: type) type {
     const info = @typeInfo(Captures);
-    if (info != .@"struct") {
-        @compileError("Block captures must be a struct, got " ++ @typeName(Captures));
-    }
-
-    const struct_fields = info.@"struct".fields;
 
     const counts = blk: {
         var req_helpers = false;
@@ -31,14 +22,27 @@ pub fn CaptureInfo(comptime Captures: type) type {
         var byref_cnt: u8 = 0;
         var weak_cnt: u8 = 0;
 
-        for (struct_fields) |field| {
-            const Traits = CaptureTraits(field.type);
+        if (info == .@"struct") {
+            const struct_fields = info.@"struct".fields;
+            for (struct_fields) |field| {
+                const Traits = CaptureTraits(field.type);
+                if (Traits.requires_helpers) req_helpers = true;
+                switch (Traits.category) {
+                    .strong => strong_cnt += 1,
+                    .byref => byref_cnt += 1,
+                    .weak => weak_cnt += 1,
+                    .block => strong_cnt += 1, // Libclosure treats block pointers as strong pointer words in compact layout
+                    .trivial => {},
+                }
+            }
+        } else {
+            const Traits = CaptureTraits(Captures);
             if (Traits.requires_helpers) req_helpers = true;
             switch (Traits.category) {
                 .strong => strong_cnt += 1,
                 .byref => byref_cnt += 1,
                 .weak => weak_cnt += 1,
-                .block => strong_cnt += 1, // Libclosure treats block pointers as strong pointer words in compact layout
+                .block => strong_cnt += 1,
                 .trivial => {},
             }
         }

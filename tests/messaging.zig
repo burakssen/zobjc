@@ -432,3 +432,59 @@ test "sendChecked: nil receiver short-circuits without lookup" {
     const result = objc.sendChecked(?objc.Object, nil_obj, "description", .{});
     try std.testing.expectEqual(@as(?objc.Object, null), result);
 }
+
+test "zmetal friction: bare domain struct with ptr accepted directly as receiver and in retain/release" {
+    const NSObject = objc.requireClass("NSObject");
+    const alloc_id = objc.send(objc.Id, NSObject, "alloc", .{});
+    const raw_inst = objc.send(objc.Id, alloc_id, "init", .{});
+
+    const Device = struct {
+        ptr: objc.Id,
+    };
+
+    const dev = Device{ .ptr = raw_inst };
+    defer objc.release(dev);
+
+    // 1. Direct receiver dispatch without self.ptr
+    const hash_val = objc.send(usize, dev, "hash", .{});
+    try std.testing.expect(hash_val != 0);
+
+    // 2. Direct retain/release preserving type
+    const retained_dev = objc.retain(dev);
+    try std.testing.expectEqual(dev.ptr, retained_dev.ptr);
+    objc.release(retained_dev);
+
+    // 3. Raw Id retain preserves non-null type
+    const retained_id: objc.Id = objc.retain(dev.ptr);
+    try std.testing.expectEqual(dev.ptr, retained_id);
+    objc.release(retained_id);
+}
+
+test "zmetal friction: Block and OwnedBlock passed directly to send" {
+    const NSObject = objc.requireClass("NSObject");
+    const obj = objc.send(objc.Object, NSObject, "alloc", .{}).send(objc.Object, "init", .{});
+    defer obj.send(void, "release", .{});
+
+    // 1. Stateless block from function (returns Block without error union)
+    const stateless_blk = objc.block.fromFunction(fn () c_int, struct {
+        fn getAnswer() c_int {
+            return 42;
+        }
+    }.getAnswer);
+
+    // Passing block directly as argument to isEqual: (which accepts id)
+    const eq = objc.send(objc.raw.BOOL, obj, "isEqual:", .{stateless_blk});
+    try std.testing.expect(!objc.raw.boolResult(eq));
+
+    // 2. OwnedBlock via closure with single pointer capture
+    var context_val: usize = 999;
+    var owned_blk = try objc.closure(fn () usize, &context_val, struct {
+        fn run(ctx: *usize) usize {
+            return ctx.*;
+        }
+    }.run);
+    defer owned_blk.deinit();
+
+    const eq2 = objc.send(objc.raw.BOOL, obj, "isEqual:", .{owned_blk});
+    try std.testing.expect(!objc.raw.boolResult(eq2));
+}

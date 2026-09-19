@@ -84,5 +84,11 @@ pub fn Block(comptime Signature: type) type {
         pub fn makeImp(self: Self) !imp_mod.OwnedImp {
             return imp_mod.makeImp(self);
         }
+
+        /// Creates a non-allocating, immortal Block handle from a free function.
+        pub fn fromFunction(comptime callback: anytype) Self {
+            const create_mod = @import("create.zig");
+            return create_mod.global(Signature, callback);
+        }
     };
 }

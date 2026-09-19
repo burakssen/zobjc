@@ -13,6 +13,11 @@ const raw = @import("raw");
 /// Shape: `fn (raw.id, raw.SEL, AbiArgs...) callconv(.c) AbiReturn`
 pub fn MessageFunctionType(comptime AbiReturn: type, comptime AbiArgsTuple: type) type {
     const fields = @typeInfo(AbiArgsTuple).@"struct".fields;
+    // fast-path common 0-arg call without @Fn reflection overhead
+    if (fields.len == 0) {
+        return fn (raw.id, raw.SEL) callconv(.c) AbiReturn;
+    }
+
     const total_params = fields.len + 2;
 
     var param_types: [total_params]type = undefined;
@@ -30,6 +35,10 @@ pub fn MessageFunctionType(comptime AbiReturn: type, comptime AbiArgsTuple: type
 /// Shape: `fn (*raw.message.objc_super, raw.SEL, AbiArgs...) callconv(.c) AbiReturn`
 pub fn SuperFunctionType(comptime AbiReturn: type, comptime AbiArgsTuple: type) type {
     const fields = @typeInfo(AbiArgsTuple).@"struct".fields;
+    if (fields.len == 0) {
+        return fn (*raw.objc_super, raw.SEL) callconv(.c) AbiReturn;
+    }
+
     const total_params = fields.len + 2;
 
     var param_types: [total_params]type = undefined;
@@ -47,6 +56,10 @@ pub fn SuperFunctionType(comptime AbiReturn: type, comptime AbiArgsTuple: type) 
 /// Shape: `fn (raw.id, raw.Method, AbiArgs...) callconv(.c) AbiReturn`
 pub fn MethodInvokeFunctionType(comptime AbiReturn: type, comptime AbiArgsTuple: type) type {
     const fields = @typeInfo(AbiArgsTuple).@"struct".fields;
+    if (fields.len == 0) {
+        return fn (raw.id, raw.Method) callconv(.c) AbiReturn;
+    }
+
     const total_params = fields.len + 2;
 
     var param_types: [total_params]type = undefined;

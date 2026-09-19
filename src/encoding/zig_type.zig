@@ -51,7 +51,7 @@ pub fn isObjCEncodable(comptime T: type) bool {
         .@"enum" => |e| isObjCEncodable(e.tag_type),
         .array => |arr| isObjCEncodable(arr.child),
         .pointer => |ptr| switch (ptr.size) {
-            .one, .c => ptr.child == anyopaque or isObjCEncodable(ptr.child),
+            .one, .c, .many => ptr.child == anyopaque or isObjCEncodable(ptr.child),
             else => false,
         },
         .optional => |opt| switch (@typeInfo(opt.child)) {

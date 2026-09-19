@@ -21,6 +21,10 @@ pub const OwnedCStringList = @import("owned_c_string_list.zig").OwnedCStringList
 
 pub const traits = @import("traits.zig");
 pub const c_free = @import("c_free.zig");
+pub const arc = @import("arc.zig");
+pub const retain = arc.retain;
+pub const release = arc.release;
+pub const autorelease = arc.autorelease;
 
 test {
     @import("std").testing.refAllDecls(@This());

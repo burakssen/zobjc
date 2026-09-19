@@ -11,7 +11,7 @@ const CaptureTraits = traits_mod.CaptureTraits;
 
 pub fn CopyDisposeHelpers(comptime Captures: type) type {
     const Lit = literal_mod.Literal(Captures);
-    const struct_fields = @typeInfo(Captures).@"struct".fields;
+    const is_struct = @typeInfo(Captures) == .@"struct";
 
     return struct {
         pub fn copy(dst_ptr: *anyopaque, src_ptr: *anyopaque) callconv(.c) void {
@@ -20,13 +20,21 @@ pub fn CopyDisposeHelpers(comptime Captures: type) type {
             const dst_caps = dst.getCaptures();
             const src_caps = src.getCaptures();
 
-            inline for (struct_fields) |field| {
-                const Traits = CaptureTraits(field.type);
+            if (comptime is_struct) {
+                const struct_fields = @typeInfo(Captures).@"struct".fields;
+                inline for (struct_fields) |field| {
+                    const Traits = CaptureTraits(field.type);
+                    if (Traits.requires_helpers) {
+                        Traits.copy(
+                            &@field(dst_caps, field.name),
+                            &@field(src_caps, field.name),
+                        );
+                    }
+                }
+            } else {
+                const Traits = CaptureTraits(Captures);
                 if (Traits.requires_helpers) {
-                    Traits.copy(
-                        &@field(dst_caps, field.name),
-                        &@field(src_caps, field.name),
-                    );
+                    Traits.copy(dst_caps, src_caps);
                 }
             }
         }
@@ -35,14 +43,21 @@ pub fn CopyDisposeHelpers(comptime Captures: type) type {
             const src: *Lit = @ptrCast(@alignCast(src_ptr));
             const src_caps = src.getCaptures();
 
-            // dispose managed captures in reverse declaration order
-            comptime var i = struct_fields.len;
-            inline while (i > 0) {
-                i -= 1;
-                const field = struct_fields[i];
-                const Traits = CaptureTraits(field.type);
+            if (comptime is_struct) {
+                const struct_fields = @typeInfo(Captures).@"struct".fields;
+                comptime var i = struct_fields.len;
+                inline while (i > 0) {
+                    i -= 1;
+                    const field = struct_fields[i];
+                    const Traits = CaptureTraits(field.type);
+                    if (Traits.requires_helpers) {
+                        Traits.dispose(&@field(src_caps, field.name));
+                    }
+                }
+            } else {
+                const Traits = CaptureTraits(Captures);
                 if (Traits.requires_helpers) {
-                    Traits.dispose(&@field(src_caps, field.name));
+                    Traits.dispose(src_caps);
                 }
             }
         }

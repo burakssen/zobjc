@@ -7,7 +7,6 @@ const receiver_mod = @import("receiver.zig");
 const selector_mod = @import("selector.zig");
 const arguments_mod = @import("arguments.zig");
 const returns_mod = @import("returns.zig");
-const encoding = @import("encoding");
 
 // Strict compile-time validation with actionable diagnostics.
 
@@ -132,7 +131,27 @@ pub fn assertValidReturn(comptime Return: type) void {
     // Raw handles
     if (Return == raw.id or Return == raw.Class or Return == raw.SEL or Return == raw.IMP) return;
 
-    // Normalized ABI type check
+    // fast C-ABI return check without pulling in recursive encoding AST reflection
     const AbiReturn = returns_mod.AbiReturnType(Return);
-    encoding.assertObjCEncodable(AbiReturn);
+    switch (@typeInfo(AbiReturn)) {
+        .pointer => |p| {
+            if (p.size == .slice) {
+                @compileError("Slice '" ++ @typeName(AbiReturn) ++ "' is not a C ABI compatible return type; use a pointer or array.");
+            }
+        },
+        .@"struct" => |s| {
+            if (s.layout != .@"extern" and !wrapper.isObjCWrapper(AbiReturn)) {
+                @compileError("Type '" ++ @typeName(AbiReturn) ++ "' is a Zig-layout struct. Only 'extern struct' types are C ABI compatible.");
+            }
+        },
+        .@"union" => |u| {
+            if (u.layout != .@"extern") {
+                @compileError("Type '" ++ @typeName(AbiReturn) ++ "' is a tagged/Zig union. Only 'extern union' types are C ABI compatible.");
+            }
+        },
+        .error_union, .error_set => {
+            @compileError("Error unions cannot cross the Objective-C C ABI.");
+        },
+        else => {},
+    }
 }

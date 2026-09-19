@@ -21,6 +21,12 @@ pub const Property = runtime.Property;
 pub const Protocol = runtime.Protocol;
 pub const Imp = runtime.Imp;
 
+// Opaque handle pointer types (for direct pointer wrapping without importing raw)
+pub const ObjectPtr = *raw.objc_object;
+pub const Id = ObjectPtr;
+pub const ClassPtr = *raw.objc_class;
+pub const SelPtr = *raw.objc_selector;
+
 // Descriptors
 pub const MethodDescription = runtime.MethodDescription;
 pub const PropertyAttribute = runtime.PropertyAttribute;
@@ -52,10 +58,14 @@ pub const callImp = messaging.callImp;
 pub const Retained = memory.Retained;
 pub const Weak = memory.Weak;
 pub const AutoreleasePool = memory.AutoreleasePool;
+pub const retain = memory.retain;
+pub const release = memory.release;
+pub const autorelease = memory.autorelease;
 
 // Objective-C Blocks
 pub const Block = block.Block;
 pub const OwnedBlock = block.OwnedBlock;
+pub const closure = block.closure;
 
 // Type Encoding
 pub const Encoding = encoding.Encoding;

@@ -55,6 +55,7 @@ pub const CaptureInfo = capture.CaptureInfo;
 
 // --- Creation & Invocation ---
 pub const createBlock = create.createBlock;
+pub const closure = create.closure;
 pub const fromFunction = create.fromFunction;
 pub const createNoCapture = create.fromFunction;
 pub const global = create.global;

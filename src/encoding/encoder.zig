@@ -78,11 +78,14 @@ pub fn encodedLength(comptime T: type) usize {
                 break :blk 1 + len_digits + encodedLength(arr.child) + 1; // "[len...]"
             },
             .pointer => |ptr| switch (ptr.size) {
-                .one, .c => 1 + pointerChildLength(ptr.child, 1),
+                .one, .c, .many => 1 + pointerChildLength(ptr.child, 1),
                 else => unreachable,
             },
             .optional => |opt| switch (@typeInfo(opt.child)) {
-                .pointer => |ptr| 1 + pointerChildLength(ptr.child, 1),
+                .pointer => |ptr| switch (ptr.size) {
+                    .one, .c, .many => 1 + pointerChildLength(ptr.child, 1),
+                    else => unreachable,
+                },
                 else => unreachable,
             },
             .@"struct" => |s| aggregateLength(T, s.fields, true),
@@ -341,7 +344,7 @@ fn writeComptimeType(comptime T: type, buf: []u8, idx: *usize, comptime ptr_dept
                 idx.* += 1;
             },
             .pointer => |ptr| switch (ptr.size) {
-                .one, .c => {
+                .one, .c, .many => {
                     buf[idx.*] = '^';
                     idx.* += 1;
                     if (ptr.child == anyopaque) {
@@ -354,15 +357,18 @@ fn writeComptimeType(comptime T: type, buf: []u8, idx: *usize, comptime ptr_dept
                 else => unreachable,
             },
             .optional => |opt| switch (@typeInfo(opt.child)) {
-                .pointer => |ptr| {
-                    buf[idx.*] = '^';
-                    idx.* += 1;
-                    if (ptr.child == anyopaque) {
-                        buf[idx.*] = 'v';
+                .pointer => |ptr| switch (ptr.size) {
+                    .one, .c, .many => {
+                        buf[idx.*] = '^';
                         idx.* += 1;
-                    } else {
-                        writePointerChildType(ptr.child, buf, idx, ptr_depth + 1);
-                    }
+                        if (ptr.child == anyopaque) {
+                            buf[idx.*] = 'v';
+                            idx.* += 1;
+                        } else {
+                            writePointerChildType(ptr.child, buf, idx, ptr_depth + 1);
+                        }
+                    },
+                    else => unreachable,
                 },
                 else => unreachable,
             },
@@ -637,6 +643,8 @@ test "primitive: Objective-C handle shapes" {
 
 test "primitive: pointers and arrays" {
     try expectEncoding(*i32, "^i");
+    try expectEncoding([*]i32, "^i");
+    try expectEncoding(?[*]f32, "^f");
     try expectEncoding(**i32, "^^i");
     try expectEncoding(?*i32, "^i");
     try expectEncoding(*anyopaque, "^v");

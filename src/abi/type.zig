@@ -31,13 +31,7 @@ pub inline fn categorize(comptime T: type) TypeCategory {
         .void => .void,
         .int, .bool, .@"enum" => .integer,
         .pointer => |ptr| switch (ptr.size) {
-            .one, .c => .pointer,
-            // Sentinel-terminated many-pointers (C strings) are pointers;
-            // bare `[*]T` has no C return representation.
-            .many => if (comptime ptr.sentinel() != null)
-                .pointer
-            else
-                @compileError("unsupported type for ABI classification: " ++ @typeName(T)),
+            .one, .c, .many => .pointer,
             else => @compileError("unsupported type for ABI classification: " ++ @typeName(T)),
         },
         // Optional pointers and optional single-pointer wrappers use pointer
@@ -75,6 +69,8 @@ test "categorize: admission table for machine representations" {
         .{ .T = *u8, .category = .pointer },
         .{ .T = ?*u8, .category = .pointer },
         .{ .T = [*:0]u8, .category = .pointer },
+        .{ .T = [*]f32, .category = .pointer },
+        .{ .T = ?[*]f32, .category = .pointer },
         .{ .T = extern struct { a: i32 }, .category = .aggregate },
         .{ .T = extern union { a: i32, b: f32 }, .category = .aggregate },
         .{ .T = [4]u8, .category = .aggregate },

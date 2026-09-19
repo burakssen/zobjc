@@ -107,6 +107,8 @@ test "returns: normalization to raw ABI return types" {
     try testing.expectEqual(c_int, AbiReturnType(TestEnum));
     try testing.expectEqual(void, AbiReturnType(void));
     try testing.expectEqual(Rect, AbiReturnType(Rect));
+    try testing.expectEqual([*]f32, AbiReturnType([*]f32));
+    try testing.expectEqual(?[*]f32, AbiReturnType(?[*]f32));
 }
 
 test "returns: fromAbi value conversion" {

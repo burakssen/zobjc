@@ -28,12 +28,14 @@ fn ptrFieldKind(comptime T: type) WrapperKind {
     if (@typeInfo(T) != .@"struct") return .none;
     if (!@hasField(T, "ptr")) return .none;
     const FieldType = @TypeOf(@as(T, undefined).ptr);
-    if (FieldType == *raw.objc_object) return .object;
-    if (FieldType == *raw.objc_class) return .class;
-    if (FieldType == *raw.objc_selector) return .selector;
+    if (FieldType == *raw.objc_object or FieldType == ?*raw.objc_object) return .object;
+    if (FieldType == *raw.objc_class or FieldType == ?*raw.objc_class) return .class;
+    if (FieldType == *raw.objc_selector or FieldType == ?*raw.objc_selector) return .selector;
     if (FieldType == raw.IMP) return .imp;
     // `Imp.ptr` stores the unwrapped function pointer (same ABI, non-optional).
     if (FieldType == @typeInfo(raw.IMP).optional.child) return .imp;
+    // Objective-C blocks are objects at runtime
+    if (FieldType == *raw.blocks.Block_layout or FieldType == ?*raw.blocks.Block_layout) return .object;
     return .none;
 }
 
@@ -45,9 +47,8 @@ fn hasExplicitMarker(comptime T: type) bool {
         }
         return marker;
     }
-    if (@hasDecl(T, "asObject") and @hasDecl(T, "fromObject")) return true;
-    if (@hasDecl(T, "toObjC") and @hasDecl(T, "fromObjC")) return true;
-    return false;
+    // any struct carrying an Objective-C handle in `ptr` is a wrapper by default
+    return true;
 }
 
 /// Returns true for a struct that explicitly opts into wrapper semantics.
@@ -133,10 +134,10 @@ test "wrapper: explicit false overrides conventions" {
     try testing.expectEqual(WrapperKind.none, wrapperKind(ExplicitFalseWithConvention));
 }
 
-test "wrapper: bare ptr structs are rejected" {
-    try testing.expect(!isObjCWrapper(BarePtr));
-    try testing.expect(!isObjCWrapper(?BarePtr));
-    try testing.expectEqual(WrapperKind.none, wrapperKind(BarePtr));
+test "wrapper: bare ptr structs with ObjC pointer are accepted, non-ObjC rejected" {
+    try testing.expect(isObjCWrapper(BarePtr));
+    try testing.expect(isObjCWrapper(?BarePtr));
+    try testing.expectEqual(WrapperKind.object, wrapperKind(BarePtr));
     try testing.expect(!isObjCWrapper(OtherPtr));
     try testing.expect(!isObjCWrapper(u8));
 }

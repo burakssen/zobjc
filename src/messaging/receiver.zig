@@ -74,13 +74,26 @@ const ExplicitNSString = struct {
     pub const objc_wrapper = true;
 };
 
-const AccidentalPtr = struct {
+const BarePtrStruct = struct {
     ptr: *raw.objc_object,
 };
 
-test "receiver: explicit wrappers accepted, bare ptr structs rejected" {
+const NonObjcPtr = struct {
+    ptr: *u8,
+};
+
+const OptedOut = struct {
+    ptr: *raw.objc_object,
+    pub const objc_wrapper = false;
+};
+
+test "receiver: explicit wrappers and bare ObjC ptr structs accepted, non-ObjC and opted-out rejected" {
     try testing.expect(isValidReceiver(ExplicitNSString));
     try testing.expect(isValidReceiver(?ExplicitNSString));
-    try testing.expect(!isValidReceiver(AccidentalPtr));
-    try testing.expect(!isValidReceiver(?AccidentalPtr));
+    try testing.expect(isValidReceiver(BarePtrStruct));
+    try testing.expect(isValidReceiver(?BarePtrStruct));
+    try testing.expect(!isValidReceiver(NonObjcPtr));
+    try testing.expect(!isValidReceiver(?NonObjcPtr));
+    try testing.expect(!isValidReceiver(OptedOut));
+    try testing.expect(!isValidReceiver(?OptedOut));
 }

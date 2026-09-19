@@ -92,7 +92,7 @@ pub fn OwnedBlock(comptime Signature: type) type {
 
         /// Creates an OwnedBlock without captures from a function.
         pub fn fromFunction(callback: anytype) !Self {
-            return create_mod.fromFunction(Signature, callback);
+            return create_mod.createBlock(Signature, struct {}, .{}, callback);
         }
     };
 }

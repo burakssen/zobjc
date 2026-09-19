@@ -94,12 +94,21 @@ pub fn createBlock(
     return owned_mod.OwnedBlock(Signature).fromRaw(@ptrCast(@alignCast(copied)));
 }
 
-/// Creates an OwnedBlock without captures from a free function or closure.
+/// Creates an OwnedBlock with captures, automatically inferring the capture type.
+pub fn closure(
+    comptime Signature: type,
+    captures: anytype,
+    comptime callback: anytype,
+) !owned_mod.OwnedBlock(Signature) {
+    return createBlock(Signature, @TypeOf(captures), captures, callback);
+}
+
+/// Creates a non-allocating, immortal Block handle from a free function without heap allocation.
 pub fn fromFunction(
     comptime Signature: type,
     comptime callback: anytype,
-) !owned_mod.OwnedBlock(Signature) {
-    return createBlock(Signature, struct {}, .{}, callback);
+) block_mod.Block(Signature) {
+    return global(Signature, callback);
 }
 
 /// Global Block optimization: returns a statically allocated non-capturing Block.
@@ -419,4 +428,53 @@ test "signature: validateSignature on Zig block" {
     const sig = blk.borrow().signature();
     try testing.expect(sig != null);
     try testing.expectEqualStrings("i@?i", std.mem.span(sig.?));
+}
+
+test "ergonomics: non-struct capture in closure" {
+    var val: usize = 100;
+    var blk = try closure(fn (usize) usize, &val, struct {
+        fn run(ptr: *usize, delta: usize) usize {
+            ptr.* += delta;
+            return ptr.*;
+        }
+    }.run);
+    defer blk.deinit();
+
+    try testing.expectEqual(@as(usize, 125), blk.call(.{25}));
+    try testing.expectEqual(@as(usize, 125), val);
+}
+
+test "ergonomics: closure with primitive capture by value" {
+    const multiplier: c_int = 10;
+    var blk = try closure(fn (c_int) c_int, multiplier, struct {
+        fn run(mult: c_int, x: c_int) c_int {
+            return mult * x;
+        }
+    }.run);
+    defer blk.deinit();
+
+    try testing.expectEqual(@as(c_int, 70), blk.call(.{7}));
+}
+
+test "ergonomics: arity adaptation ignoring block parameters" {
+    var count: usize = 0;
+    var blk = try closure(fn (c_int, f64) void, &count, struct {
+        fn run(ptr: *usize) void {
+            ptr.* += 1;
+        }
+    }.run);
+    defer blk.deinit();
+
+    blk.call(.{ 42, 3.14 });
+    try testing.expectEqual(@as(usize, 1), count);
+}
+
+test "ergonomics: stateless fromFunction returns direct Block without error" {
+    const blk = fromFunction(fn (c_int, c_int) c_int, struct {
+        fn add(a: c_int, b: c_int) c_int {
+            return a + b;
+        }
+    }.add);
+
+    try testing.expectEqual(@as(c_int, 42), blk.call(.{ 20, 22 }));
 }
